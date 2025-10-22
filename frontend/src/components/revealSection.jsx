@@ -11,34 +11,39 @@ export default function RevealSection({
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    const element = ref.current;
+    if (!element) return;
 
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          const t = setTimeout(() => setVisible(true), delay);
-          if (once) io.disconnect();
-          return () => clearTimeout(t);
-        } else if (!once) {
-          setVisible(false);
-        }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const timer = setTimeout(() => setVisible(true), delay);
+            if (once) observer.unobserve(element);
+            return () => clearTimeout(timer);
+          } else if (!once) {
+            setVisible(false);
+          }
+        });
       },
-      {rootMargin: "0px 0px -10% 0px", threshold: 0.15}
+      {
+        root: null,
+        threshold: 0, // trigger immediately when any part enters
+        rootMargin: "0px 0px -50% 0px", // start animation when element is halfway from viewport bottom
+      }
     );
 
-    io.observe(el);
-    return () => io.disconnect();
+    observer.observe(element);
+
+    return () => observer.disconnect();
   }, [once, delay]);
 
   return (
     <Tag
       ref={ref}
-      className={[
-        "transition-all duration-700 ease-out will-change-transform",
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1",
-        className,
-      ].join(" ")}
+      className={`${className} transition-all duration-700 ease-out ${
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+      } will-change-transform`}
     >
       {children}
     </Tag>
