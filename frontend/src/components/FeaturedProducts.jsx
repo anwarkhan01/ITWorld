@@ -27,7 +27,7 @@ function FeaturedProducts({title = "Featured Products", subtitle, items = []}) {
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4">
             {items.map((p) => (
-              <ProductCard key={p.id} product={p} />
+              <ProductCard key={p.product_id} product={p} />
             ))}
           </div>
         </div>
