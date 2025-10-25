@@ -51,20 +51,20 @@ const Hero = () => {
 
       {/* Arrows */}
       <button
-        className="absolute top-1/2 left-4 transform -translate-y-1/2 text-white bg-black bg-opacity-30 p-2 rounded-full z-20 hover:bg-opacity-50 transition"
+        className="absolute top-1/2 left-4 hidden lg:block transform -translate-y-1/2 text-gray-200 bg-opacity-30 p-2 rounded-full z-20 hover:bg-opacity-50 transition"
         onClick={prevSlide}
       >
-        <ChevronLeft size={24} />
+        <ChevronLeft size={50} />
       </button>
       <button
-        className="absolute top-1/2 right-4 transform -translate-y-1/2 text-white bg-black bg-opacity-30 p-2 rounded-full z-20 hover:bg-opacity-50 transition"
+        className="absolute top-1/2 right-4 hidden lg:block transform -translate-y-1/2 text-gray-200 bg-opacity-30 p-2 rounded-full z-20 hover:bg-opacity-50 transition"
         onClick={nextSlide}
       >
-        <ChevronRight size={24} />
+        <ChevronRight size={50} />
       </button>
 
       {/* Dots */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3 z-20">
+      <div className="absolute bottom-6 left-1/2  hidden lg:flex  transform -translate-x-1/2 gap-3 z-20">
         {heroImages.map((_, index) => (
           <div
             key={index}

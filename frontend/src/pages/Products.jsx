@@ -1,8 +1,8 @@
 import {useMemo, useState} from "react";
 import ProductCardAction from "../components/ProductCardAction";
-// import productsData from "../data/products.js";
 import {useCart} from "../contexts/CartContext.jsx";
 import {useProducts} from "../contexts/ProductsContext.jsx";
+import {useNavigate} from "react-router-dom";
 const categories = [
   "All",
   "GPU",
@@ -18,13 +18,8 @@ export default function Products() {
   const [category, setCategory] = useState("All");
   const {addToCart} = useCart();
   const {products, loading} = useProducts();
-  // console.log("products from products.jsx", products);
-  // const productList = Array.isArray(products) ? products : products.products;
+  const navigate = useNavigate();
 
-  // console.log("productList", productList);
-  // const productss = Array.isArray(products)
-  //   ? productsData
-  //   : productsData.products;
   const productss = products;
 
   const list = useMemo(() => {
@@ -48,8 +43,8 @@ export default function Products() {
   }, [productss, category, query]);
 
   const handleAdd = (product) => {
-    console.log(product.product_id);
     addToCart(product.product_id);
+    navigate("/cart");
   };
 
   return (
@@ -85,13 +80,12 @@ export default function Products() {
           </div>
         </div>
 
-        {/* Grid: 1 / 3 / 4 per row */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4">
           {list.map((p) => (
             <ProductCardAction
               key={p.product_id}
               product={p}
-              detailsTo={`/product/${p.id}`}
+              detailsTo={`/product/${p.product_id}`}
               onAdd={handleAdd}
             />
           ))}

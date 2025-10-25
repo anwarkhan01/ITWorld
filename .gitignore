@@ -40,3 +40,7 @@ Thumbs.db
 frontend/package-lock.json
 backend/package-lock.json
 backend/.prettierrc
+
+#Firebase
+serviceAccountKeys.json
+backend/serviceAccountKeys.json

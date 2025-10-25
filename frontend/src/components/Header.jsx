@@ -2,10 +2,11 @@ import {useState} from "react";
 import {Link} from "react-router-dom";
 import {useCart} from "../contexts/CartContext";
 import {ShoppingCart} from "lucide-react";
-
+import {useAuth} from "../contexts/AuthContext";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const {cartItems} = useCart();
+  const {user, idToken} = useAuth();
 
   return (
     <header className="relative bg-white shadow-sm h-16">
@@ -13,7 +14,7 @@ const Navbar = () => {
         {/* Logo */}
         <Link
           to="/"
-          className="flex items-center space-x-2 text-lg font-bold tracking-wide"
+          className="flex items-center text-lg font-bold tracking-wide"
         >
           <span className="text-blue-600">IT</span>
           <span className="text-gray-800">World</span>
@@ -30,6 +31,21 @@ const Navbar = () => {
           >
             Products
           </Link>
+          {/* <Link
+            to="/contact"
+            className="text-gray-700 hover:text-blue-600 transition"
+          >
+            Contact
+          </Link> */}
+          {!user && (
+            <Link
+              to="/auth"
+              className="text-gray-700 hover:text-blue-600 transition"
+            >
+              SignUp
+            </Link>
+          )}
+
           <Link
             to="/cart"
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
@@ -37,6 +53,18 @@ const Navbar = () => {
             <ShoppingCart className="h-4 w-4" />
             <span className="font-semibold">Cart ({cartItems.length})</span>
           </Link>
+          {user && (
+            <Link
+              to="/auth"
+              className="text-gray-700 hover:text-blue-600 transition"
+            >
+              <img
+                src={user?.photoURL}
+                alt={user?.displayName}
+                className="rounded-full h-10 w-10"
+              />
+            </Link>
+          )}
         </nav>
 
         {/* Mobile Buttons */}
@@ -77,6 +105,21 @@ const Navbar = () => {
               onClick={() => setIsOpen(false)}
             >
               Products
+            </Link>
+            {/* <Link
+              to="/contact"
+              className="text-gray-700 hover:text-blue-600 transition"
+              onClick={() => setIsOpen(false)}
+            >
+              Contact
+            </Link> */}
+
+            <Link
+              to="/auth"
+              className="text-gray-700 hover:text-blue-600 transition"
+              onClick={() => setIsOpen(false)}
+            >
+              {user ? "Profile" : "SignUp"}
             </Link>
           </div>
         </div>

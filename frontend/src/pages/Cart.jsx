@@ -37,13 +37,13 @@ export default function Cart() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Left: Items */}
             <div className="lg:col-span-2 space-y-4">
-              {cartItems.map((it) => (
+              {cartItems.toReversed().map((it) => (
                 <div
                   key={it.product_id}
                   className="flex gap-4 bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition"
                 >
                   <Link
-                    to={`/product/${it.id}`}
+                    to={`/product/${it.product_id}`}
                     className="block w-28 shrink-0 overflow-hidden rounded-lg bg-gray-100"
                   >
                     <img
@@ -143,7 +143,7 @@ export default function Cart() {
 
               {/* Product list */}
               <div className="space-y-4">
-                {cartItems.map((item) => (
+                {cartItems.toReversed().map((item) => (
                   <div
                     key={item.product_id}
                     className="flex justify-between items-center"

@@ -13,7 +13,6 @@ export const ProductsProvider = ({children}) => {
           `${import.meta.env.VITE_BACKEND_URL}/api/products/getproducts`
         );
         const data = await res.json();
-        console.log(data);
         setProducts(Array.isArray(data) ? data : data.data || []);
       } catch (err) {
         console.error("Error fetching products:", err);

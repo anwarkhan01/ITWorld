@@ -1,8 +1,9 @@
 import {useMemo, useState} from "react";
 import {useParams} from "react-router-dom";
 import {ShoppingCart, CreditCard} from "lucide-react";
-import {useProducts} from "../contexts/ProductsContext";
-
+import {useProducts} from "../contexts/ProductsContext.jsx";
+import {useCart} from "../contexts/CartContext.jsx";
+import {useNavigate} from "react-router-dom";
 const formatINR = (n) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -13,6 +14,8 @@ const formatINR = (n) =>
 export default function ProductDetail() {
   const {products} = useProducts();
   const {id} = useParams();
+  const {addToCart} = useCart();
+  const navigate = useNavigate();
   const product = useMemo(
     () => products.find((p) => p.product_id === id),
     [id, products]
@@ -25,7 +28,10 @@ export default function ProductDetail() {
         Product not found
       </main>
     );
-
+  const handleAddToCart = (productID) => {
+    addToCart(productID);
+    navigate("/cart");
+  };
   const images = product.images?.length ? product.images : [product.image];
 
   return (
@@ -57,10 +63,13 @@ export default function ProductDetail() {
 
           {/* Buttons below image */}
           <div className="flex flex-col sm:flex-row gap-3 mt-2">
-            <button className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#f0c14b] px-5 py-3 font-semibold text-black shadow hover:bg-[#e2b23a] transition">
+            <button
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#f0c14b] px-5 py-3 font-semibold text-black shadow hover:bg-[#e2b23a] transition cursor-pointer"
+              onClick={() => handleAddToCart(product.product_id)}
+            >
               <ShoppingCart className="h-5 w-5" /> Add to Cart
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#fa8900] px-5 py-3 font-semibold text-white shadow hover:bg-[#e67e00] transition">
+            <button className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#fa8900] px-5 py-3 font-semibold text-white shadow hover:bg-[#e67e00] transition cursor-pointer">
               <CreditCard className="h-5 w-5" /> Buy Now
             </button>
           </div>
@@ -95,7 +104,7 @@ export default function ProductDetail() {
               {product.product_name}
             </h1>
             <div className="text-3xl font-bold text-green-700 mt-2">
-              {formatINR(product.price)}
+              ₹{product.price}
             </div>
           </div>
 
