@@ -1,7 +1,4 @@
-
 export default admin; import admin from "firebase-admin";
-// import serviceAccount from "../serviceAccountKeys.json" with { type: "json" };
-// console.log(process.env.FIREBASE_SERVICE_ACOUNT_KEYS)
 
 const serviceAccount = {
     "type": process.env.TYPE,
@@ -17,9 +14,6 @@ const serviceAccount = {
     "universe_domain": process.env.UNIVERSE_DOMAIN
 }
 
-
-console.log(serviceAccount)
-// const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACOUNT_KEYS);
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
 });

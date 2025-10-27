@@ -7,7 +7,6 @@ const CartContext = createContext();
 export const CartProvider = ({children}) => {
   const {products} = useProducts();
   const {mongoUser, user} = useAuth();
-
   const [cartItems, setCartItems] = useState([]);
   const [cartLoaded, setCartLoaded] = useState(false);
   const previousAuthState = useRef(null);
@@ -106,15 +105,8 @@ export const CartProvider = ({children}) => {
   }, [mongoUser, user, products]);
 
   // Sync cart whenever it changes (but NOT on initial load)
-  const isInitialMount = useRef(true);
-
   useEffect(() => {
-    // Skip the first render (initial mount)
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-
+    // Don't sync until cart has been loaded at least once
     if (!cartLoaded || isSyncing.current) return;
 
     const saveCart = async () => {
@@ -164,7 +156,6 @@ export const CartProvider = ({children}) => {
       }
     };
 
-    // Add small delay to debounce rapid changes
     const timeoutId = setTimeout(saveCart, 300);
     return () => clearTimeout(timeoutId);
   }, [cartItems, mongoUser, user, cartLoaded]);
