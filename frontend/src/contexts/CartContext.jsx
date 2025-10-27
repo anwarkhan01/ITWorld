@@ -7,10 +7,12 @@ const CartContext = createContext();
 export const CartProvider = ({children}) => {
   const {products} = useProducts();
   const {mongoUser, user} = useAuth();
+
   const [cartItems, setCartItems] = useState([]);
   const [cartLoaded, setCartLoaded] = useState(false);
   const previousAuthState = useRef(null);
   const isSyncing = useRef(false);
+  const hasLoadedOnce = useRef(false);
 
   // Load initial cart and handle login merge
   useEffect(() => {
@@ -18,6 +20,14 @@ export const CartProvider = ({children}) => {
       const isLoggedIn = !!(mongoUser && user);
       const wasLoggedIn = previousAuthState.current;
       const justLoggedIn = !wasLoggedIn && isLoggedIn;
+      const justLoggedOut = wasLoggedIn && !isLoggedIn;
+
+      // Reset hasLoadedOnce when auth state changes
+      if (justLoggedIn || justLoggedOut) {
+        console.log("🔄 Auth state changed - resetting hasLoadedOnce");
+        hasLoadedOnce.current = false;
+        isSyncing.current = false;
+      }
 
       if (isLoggedIn) {
         try {
@@ -77,6 +87,7 @@ export const CartProvider = ({children}) => {
           console.error("Failed to load cart:", err);
         } finally {
           setCartLoaded(true);
+          hasLoadedOnce.current = true;
         }
       } else {
         const local = JSON.parse(localStorage.getItem("cart")) || [];
@@ -93,6 +104,7 @@ export const CartProvider = ({children}) => {
           setCartItems([]);
         }
         setCartLoaded(true);
+        hasLoadedOnce.current = true;
       }
 
       // Update previous auth state
@@ -107,7 +119,7 @@ export const CartProvider = ({children}) => {
   // Sync cart whenever it changes (but NOT on initial load)
   useEffect(() => {
     // Don't sync until cart has been loaded at least once
-    if (!cartLoaded || isSyncing.current) return;
+    if (!hasLoadedOnce.current || isSyncing.current) return;
 
     const saveCart = async () => {
       isSyncing.current = true;
@@ -158,7 +170,7 @@ export const CartProvider = ({children}) => {
 
     const timeoutId = setTimeout(saveCart, 300);
     return () => clearTimeout(timeoutId);
-  }, [cartItems, mongoUser, user, cartLoaded]);
+  }, [cartItems, mongoUser, user]);
 
   // Cart actions
   const addToCart = (productId, quantity = 1) => {
