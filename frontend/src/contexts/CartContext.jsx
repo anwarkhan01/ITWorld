@@ -24,7 +24,6 @@ export const CartProvider = ({children}) => {
 
       // Reset hasLoadedOnce when auth state changes
       if (justLoggedIn || justLoggedOut) {
-        console.log("🔄 Auth state changed - resetting hasLoadedOnce");
         hasLoadedOnce.current = false;
         isSyncing.current = false;
       }

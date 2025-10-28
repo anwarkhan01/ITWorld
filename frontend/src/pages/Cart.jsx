@@ -105,7 +105,6 @@ export default function Cart() {
                         </p>
                         <button
                           onClick={() => {
-                            console.log("productID from cart", it.product_id);
                             removeFromCart(it.product_id);
                           }}
                           className="text-xs cursor-pointer text-red-500 hover:text-red-700 mt-1 inline-flex items-center gap-1"
@@ -122,7 +121,7 @@ export default function Cart() {
               <div className="flex items-center justify-between mt-6">
                 <button
                   onClick={clearCart}
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
+                  className="rounded-md border border-gray-300 px-3 py-2 text-sm cursor-pointer hover:bg-gray-100"
                 >
                   Clear Cart
                 </button>
@@ -192,7 +191,7 @@ export default function Cart() {
 
               {/* Proceed to checkout */}
               <button
-                className="mt-6 w-full bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
+                className="mt-6 w-full cursor-pointer bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
                 onClick={() => alert("Proceeding to checkout...")}
               >
                 Proceed to Checkout

@@ -1,15 +1,35 @@
-import {useState} from "react";
+import {useState, useRef, useEffect} from "react";
 import {Link} from "react-router-dom";
 import {useCart} from "../contexts/CartContext";
-import {ShoppingCart} from "lucide-react";
+import {ShoppingCart, Menu, X} from "lucide-react";
 import {useAuth} from "../contexts/AuthContext";
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const {cartItems} = useCart();
-  const {user, idToken} = useAuth();
+  const {user} = useAuth();
+
+  const mobileMenuRef = useRef(null);
+
+  // Click outside to close mobile menu
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [mobileMenuRef]);
 
   return (
-    <header className="relative bg-white shadow-sm h-16">
+    <header className="relative bg-white shadow-sm h-16 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
         {/* Logo */}
         <Link
@@ -31,12 +51,7 @@ const Navbar = () => {
           >
             Products
           </Link>
-          {/* <Link
-            to="/contact"
-            className="text-gray-700 hover:text-blue-600 transition"
-          >
-            Contact
-          </Link> */}
+
           {!user && (
             <Link
               to="/auth"
@@ -53,6 +68,7 @@ const Navbar = () => {
             <ShoppingCart className="h-4 w-4" />
             <span className="font-semibold">Cart ({cartItems.length})</span>
           </Link>
+
           {user && (
             <Link
               to="/auth"
@@ -83,14 +99,17 @@ const Navbar = () => {
             className="text-gray-700 hover:text-blue-600 focus:outline-none text-2xl"
             onClick={() => setIsOpen(!isOpen)}
           >
-            ☰
+            {isOpen ? <X /> : <Menu />}
           </button>
         </div>
       </div>
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden absolute top-full left-0 w-full bg-white z-50 shadow-sm border-t border-gray-200">
+        <div
+          ref={mobileMenuRef}
+          className="md:hidden absolute top-full left-0 w-full bg-white z-50 shadow-sm border-t border-gray-200"
+        >
           <div className="flex flex-col px-4 py-2 space-y-2">
             <Link
               to="/"
@@ -106,13 +125,6 @@ const Navbar = () => {
             >
               Products
             </Link>
-            {/* <Link
-              to="/contact"
-              className="text-gray-700 hover:text-blue-600 transition"
-              onClick={() => setIsOpen(false)}
-            >
-              Contact
-            </Link> */}
 
             <Link
               to="/auth"

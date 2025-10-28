@@ -1,6 +1,7 @@
 import React from "react";
 import {Cpu, Laptop, Monitor, Mouse, Keyboard, Zap} from "lucide-react";
 import RevealSection from "./revealSection";
+import {useNavigate} from "react-router-dom";
 const categories = [
   {name: "GPU", icon: <Zap size={24} />},
   {name: "Laptop", icon: <Laptop size={24} />},
@@ -11,6 +12,7 @@ const categories = [
 ];
 
 const Categories = () => {
+  const navigate = useNavigate();
   return (
     <RevealSection className="bg-muted/30">
       <div className="py-16 bg-gray-50">
@@ -23,6 +25,9 @@ const Categories = () => {
             {categories.map((cat) => (
               <div
                 key={cat.name}
+                onClick={() => {
+                  navigate("products");
+                }}
                 className="group flex flex-col items-center p-6 rounded-lg cursor-pointer transition-all shadow-sm hover:shadow-lg border border-gray-200 hover:border-blue-600 bg-white"
               >
                 {/* Icon circle */}

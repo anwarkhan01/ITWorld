@@ -4,6 +4,7 @@ import Categories from "../components/Categories.jsx";
 import FeaturedProducts from "../components/FeaturedProducts.jsx";
 import featuredProductsItems from "../data/products.js";
 import {useProducts} from "../contexts/ProductsContext.jsx";
+import CategoriesBelt from "../components/CategoriesBelt.jsx";
 
 const Home = () => {
   const {products, loading} = useProducts();
@@ -11,6 +12,7 @@ const Home = () => {
   // console.log("products", products);
   return (
     <div className="bg-gray-100">
+      {/* <CategoriesBelt /> */}
       <Hero />
       <Categories />
       <FeaturedProducts
