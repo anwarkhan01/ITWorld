@@ -1,5 +1,5 @@
 import admin from "firebase-admin";
-import { ApiError } from "../utils/ApiError.js";
+import ApiError from "../utils/ApiError.js";
 
 
 export default async function verifyToken(req, res, next) {
