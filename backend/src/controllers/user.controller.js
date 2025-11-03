@@ -10,10 +10,8 @@ const googleAuthController = asyncHandler(async (req, res, next) => {
     if (!token) {
         return next(new ApiError(400, "Firebase token is required"));
     }
-
     const decodedToken = await admin.auth().verifyIdToken(token);
     const { uid, email, name, picture } = decodedToken;
-
     const user = await User.findOneAndUpdate(
         { firebaseUid: uid },
         {
@@ -78,4 +76,70 @@ const emailLogin = asyncHandler(async (req, res, next) => {
     res.json(new ApiResponse(200, "User logged in successfully", user));
 });
 
-export { googleAuthController, emailSignUp, emailLogin }
+const updatePhone = asyncHandler(async (req, res, next) => {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return next(new ApiError(400, "Firebase token is required"));
+
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const uid = decodedToken.uid;
+
+    const { phone } = req.body;
+    console.log(req.body)
+    if (!phone) return next(new ApiError(400, "Phone number is required"));
+
+    const user = await User.findOneAndUpdate(
+        { firebaseUid: uid },
+        { $set: { phone: phone } },
+        { new: true, runValidators: true }
+    );
+
+    if (!user) return next(new ApiError(404, "User not found"));
+
+    return res.json(new ApiResponse(200, "Phone number updated successfully", user));
+});
+
+const updateAddress = asyncHandler(async (req, res, next) => {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return next(new ApiError(400, "Firebase token is required"));
+
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const uid = decodedToken.uid;
+
+    const { address } = req.body;
+    if (!address) return next(new ApiError(400, "Address object is required"));
+
+    const updateFields = {};
+    if (address.fullAddress !== undefined)
+        updateFields["address.fullAddress"] = address.fullAddress;
+    if (address.landmark !== undefined)
+        updateFields["address.landmark"] = address.landmark;
+    if (address.city !== undefined)
+        updateFields["address.city"] = address.city;
+    if (address.state !== undefined)
+        updateFields["address.state"] = address.state;
+    if (address.country !== undefined)
+        updateFields["address.country"] = address.country;
+    if (address.pincode !== undefined)
+        updateFields["address.pincode"] = address.pincode;
+
+    const user = await User.findOneAndUpdate(
+        { firebaseUid: uid },
+        { $set: updateFields },
+        { new: true, runValidators: true }
+    );
+
+    if (!user) return next(new ApiError(404, "User not found"));
+
+    return res.json(
+        new ApiResponse(200, "Address updated successfully", user)
+    );
+});
+
+
+// * TODO: implement pincode deliverability check
+const checkPincode = asyncHandler((req, res, next) => {
+    res.json(new ApiResponse(300, "We will implement this soon"))
+
+})
+
+export { googleAuthController, emailSignUp, emailLogin, updatePhone, updateAddress, checkPincode }

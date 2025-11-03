@@ -1,4 +1,10 @@
-import React, {createContext, useContext, useState, useEffect} from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+} from "react";
 import {auth, googleProvider} from "../config/firebase.js";
 import {
   onAuthStateChanged,
@@ -13,28 +19,41 @@ export const AuthProvider = ({children}) => {
   const [mongoUser, setMongoUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const authStateHandledRef = useRef(false);
+
+  const fetchMongoUser = async (firebaseUser) => {
+    try {
+      const token = await firebaseUser.getIdToken();
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/auth/google-auth`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!res.ok) throw new Error("Failed to fetch mongo user");
+      const data = await res.json();
+      return data.data;
+    } catch (error) {
+      console.error("Failed to fetch mongo user:", error);
+      return null;
+    }
+  };
+
   const signInWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
-      const token = await firebaseUser.getIdToken();
+      const mongoData = await fetchMongoUser(firebaseUser);
 
-      const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/auth/google`,
-        {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({token}),
-        }
-      );
-
-      const data = await res.json();
       setUser(firebaseUser);
-      setMongoUser(data.user);
-      console.log("firebaseUser", firebaseUser);
-      console.log("mongoUser", data.user);
+      setMongoUser(mongoData);
     } catch (err) {
       console.error("Google sign-in failed:", err);
+      throw err;
     }
   };
 
@@ -44,47 +63,38 @@ export const AuthProvider = ({children}) => {
       setUser(null);
       setMongoUser(null);
       localStorage.removeItem("cart");
-      console.log("User signed out successfully");
     } catch (err) {
       console.error("Sign-out failed:", err);
+      throw err;
     }
   };
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        const token = await firebaseUser.getIdToken();
-        const res = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/auth/google`,
-          {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({token}),
-          }
-        );
-        const data = await res.json();
-        setMongoUser(data.user);
 
-        // Sync guest cart to backend
-        const guestCart = JSON.parse(localStorage.getItem("cart")) || [];
-        if (guestCart.length) {
-          await fetch(
-            `${import.meta.env.VITE_BACKEND_URL}/api/cart/update-cart`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({cart: guestCart}),
-            }
-          );
-          localStorage.removeItem("cart");
-        }
-      } else {
-        setMongoUser(null);
+  // Handle Firebase auth state changes
+  useEffect(() => {
+    authStateHandledRef.current = false;
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Prevent multiple runs for the same auth state
+      if (authStateHandledRef.current) {
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      try {
+        if (firebaseUser) {
+          const mongoData = await fetchMongoUser(firebaseUser);
+          setUser(firebaseUser);
+          setMongoUser(mongoData);
+        } else {
+          setUser(null);
+          setMongoUser(null);
+        }
+      } catch (error) {
+        console.error("Auth state change error:", error);
+      } finally {
+        authStateHandledRef.current = true;
+        setLoading(false);
+      }
     });
 
     return unsubscribe;
@@ -92,11 +102,23 @@ export const AuthProvider = ({children}) => {
 
   return (
     <AuthContext.Provider
-      value={{user, mongoUser, loading, signInWithGoogle, signOutWithGoogle}}
+      value={{
+        user,
+        mongoUser,
+        loading,
+        signInWithGoogle,
+        signOutWithGoogle,
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return context;
+};

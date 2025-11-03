@@ -1,11 +1,14 @@
 import {useMemo} from "react";
-import {Link} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import {Trash2, Plus, Minus, Truck} from "lucide-react";
 import {useCart} from "../contexts/CartContext.jsx";
+import {useAuth} from "../contexts/AuthContext.jsx";
 
 export default function Cart() {
   const {cartItems, increaseQty, decreaseQty, removeFromCart, clearCart} =
     useCart();
+  const {user} = useAuth();
+  const navigate = useNavigate();
 
   const totals = useMemo(() => {
     const subtotal = cartItems.reduce(
@@ -17,6 +20,14 @@ export default function Cart() {
     const grandTotal = Math.max(0, subtotal - discount + shipping);
     return {subtotal, discount, shipping, grandTotal};
   }, [cartItems]);
+
+  const handleCheckoutClick = () => {
+    navigate("/checkout");
+  };
+
+  const handlePincodeSuccess = (pincode) => {
+    navigate("/checkout", {state: {pincode}});
+  };
 
   return (
     <main className="bg-gray-50 min-h-screen py-10">
@@ -135,7 +146,7 @@ export default function Cart() {
             </div>
 
             {/* Right: Summary */}
-            <div className="bg-white rounded-xl shadow-md p-6 h-max ">
+            <div className="bg-white rounded-xl shadow-md p-6 h-max">
               <h2 className="text-lg font-semibold text-gray-800 mb-4">
                 Order Summary
               </h2>
@@ -192,7 +203,7 @@ export default function Cart() {
               {/* Proceed to checkout */}
               <button
                 className="mt-6 w-full cursor-pointer bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
-                onClick={() => alert("Proceeding to checkout...")}
+                onClick={handleCheckoutClick}
               >
                 Proceed to Checkout
               </button>

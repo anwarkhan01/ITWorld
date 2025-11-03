@@ -10,7 +10,7 @@ export const ProductsProvider = ({children}) => {
     const fetchProducts = async () => {
       try {
         const res = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/products/getproducts`
+          `${import.meta.env.VITE_BACKEND_URL}/api/products/get-products`
         );
         const data = await res.json();
         setProducts(Array.isArray(data) ? data : data.data || []);

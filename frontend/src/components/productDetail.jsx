@@ -4,15 +4,11 @@ import {ShoppingCart, CreditCard} from "lucide-react";
 import {useProducts} from "../contexts/ProductsContext.jsx";
 import {useCart} from "../contexts/CartContext.jsx";
 import {useNavigate} from "react-router-dom";
-const formatINR = (n) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(n);
+import {useAuth} from "../contexts/AuthContext.jsx";
 
 export default function ProductDetail() {
   const {products} = useProducts();
+  const {user} = useAuth();
   const {id} = useParams();
   const {addToCart} = useCart();
   const navigate = useNavigate();
@@ -28,11 +24,20 @@ export default function ProductDetail() {
         Product not found
       </main>
     );
+
   const handleAddToCart = (productID) => {
     addToCart(productID);
     navigate("/cart");
   };
   const images = product.images?.length ? product.images : [product.image];
+
+  const handleBuyNow = (productID) => {
+    if (!user) {
+      navigate("/auth/login");
+    } else {
+      navigate("/checkout", {state: {buyNowItemId: productID}});
+    }
+  };
 
   return (
     <main className="bg-background py-10">
@@ -69,7 +74,10 @@ export default function ProductDetail() {
             >
               <ShoppingCart className="h-5 w-5" /> Add to Cart
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#fa8900] px-5 py-3 font-semibold text-white shadow hover:bg-[#e67e00] transition cursor-pointer">
+            <button
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#fa8900] px-5 py-3 font-semibold text-white shadow hover:bg-[#e67e00] transition cursor-pointer"
+              onClick={() => handleBuyNow(product.product_id)}
+            >
               <CreditCard className="h-5 w-5" /> Buy Now
             </button>
           </div>
@@ -81,7 +89,7 @@ export default function ProductDetail() {
                 <button
                   key={i}
                   onClick={() => setActiveImg(i)}
-                  className={`flex-shrink-0 border rounded-lg overflow-hidden w-20 h-20 ${
+                  className={`shrink-0 border rounded-lg overflow-hidden w-20 h-20 ${
                     i === activeImg ? "border-[#fa8900]" : "border-gray-200"
                   }`}
                 >

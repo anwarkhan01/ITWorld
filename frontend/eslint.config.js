@@ -24,6 +24,15 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'import/extensions': [
+        'error',
+        'ignorePackages',
+        {
+          js: 'always',
+          jsx: 'always',
+          json: 'always'
+        }
+      ],
     },
   },
 ])

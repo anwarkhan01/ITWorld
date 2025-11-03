@@ -7,6 +7,16 @@ const userSchema = new mongoose.Schema({
     authProvider: { type: String },
     emailVerified: { type: Boolean },
     photoURL: { type: String },
+    phone: { type: String },
+
+    address: {
+        fullAddress: { type: String },
+        landmark: { type: String },
+        city: { type: String },
+        state: { type: String },
+        country: { type: String, default: "India" },
+        pincode: { type: String },
+    },
 }, { timestamps: true });
 
 export default mongoose.model("User", userSchema);

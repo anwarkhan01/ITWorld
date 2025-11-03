@@ -4,202 +4,232 @@ import {useAuth} from "./AuthContext.jsx";
 
 const CartContext = createContext();
 
+const STORAGE_KEY = "cart";
+const SYNC_DELAY = 500;
+
 export const CartProvider = ({children}) => {
   const {products} = useProducts();
-  const {mongoUser, user} = useAuth();
+  const {mongoUser, user, loading} = useAuth();
 
   const [cartItems, setCartItems] = useState([]);
-  const [cartLoaded, setCartLoaded] = useState(false);
-  const previousAuthState = useRef(null);
-  const isSyncing = useRef(false);
-  const hasLoadedOnce = useRef(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load initial cart and handle login merge
-  useEffect(() => {
-    const loadCart = async () => {
-      const isLoggedIn = !!(mongoUser && user);
-      const wasLoggedIn = previousAuthState.current;
-      const justLoggedIn = !wasLoggedIn && isLoggedIn;
-      const justLoggedOut = wasLoggedIn && !isLoggedIn;
+  const syncTimeoutRef = useRef(null);
+  const prevAuthRef = useRef(null);
+  const hasLoggedInRef = useRef(false);
 
-      // Reset hasLoadedOnce when auth state changes
-      if (justLoggedIn || justLoggedOut) {
-        hasLoadedOnce.current = false;
-        isSyncing.current = false;
-      }
+  const hydrateCart = (cart) => {
+    if (!Array.isArray(cart) || !products.length) return [];
+    return cart
+      .map(({id, productId, quantity}) => {
+        const pid = productId || id;
+        const product = products.find((p) => p.product_id === pid);
+        return product ? {...product, quantity} : null;
+      })
+      .filter(Boolean);
+  };
 
-      if (isLoggedIn) {
-        try {
-          const token = await user.getIdToken();
-          if (justLoggedIn) {
-            const localCart = JSON.parse(localStorage.getItem("cart")) || [];
+  const mergeCarts = (guest, server) => {
+    const map = new Map();
 
-            if (localCart.length > 0) {
-              // Upload localStorage cart to MongoDB
-              const uploadRes = await fetch(
-                `${import.meta.env.VITE_BACKEND_URL}/api/cart/update-cart`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({cart: localCart}),
-                }
-              );
-              const uploadData = await uploadRes.json();
-              console.log("Upload successful:", uploadData);
-              localStorage.removeItem("cart");
-              console.log(" localStorage cleared");
-            }
-          }
-
-          // Fetch the current MongoDB cart
-          const res = await fetch(
-            `${import.meta.env.VITE_BACKEND_URL}/api/cart/get-cart`,
-            {
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-          const data = await res.json();
-
-          // Hydrate cart with product details
-          if (data?.items?.length && products.length) {
-            const hydrated = data.items
-              .map(({productId, quantity}) => {
-                const product = products.find(
-                  (p) => p.product_id === productId
-                );
-                return product ? {...product, quantity} : null;
-              })
-              .filter(Boolean);
-            setCartItems(hydrated);
-          } else {
-            setCartItems([]);
-          }
-
-          localStorage.removeItem("cart");
-        } catch (err) {
-          console.error("Failed to load cart:", err);
-        } finally {
-          setCartLoaded(true);
-          hasLoadedOnce.current = true;
-        }
-      } else {
-        const local = JSON.parse(localStorage.getItem("cart")) || [];
-
-        if (local.length && products.length) {
-          const hydrated = local
-            .map(({id, quantity}) => {
-              const product = products.find((p) => p.product_id === id);
-              return product ? {...product, quantity} : null;
-            })
-            .filter(Boolean);
-          setCartItems(hydrated);
-        } else {
-          setCartItems([]);
-        }
-        setCartLoaded(true);
-        hasLoadedOnce.current = true;
-      }
-
-      // Update previous auth state
-      previousAuthState.current = isLoggedIn;
-    };
-
-    if (products.length) {
-      loadCart();
+    for (const item of server) {
+      const pid = item.product_id || item.productId;
+      map.set(pid, {...item});
     }
-  }, [mongoUser, user, products]);
 
-  // Sync cart whenever it changes (but NOT on initial load)
+    // Add guest items (if not already in server, merge quantities if exists)
+    for (const item of guest) {
+      const pid = item.product_id || item.productId;
+      if (map.has(pid)) {
+        // If item exists in server, add guest quantity to server quantity
+        const existing = map.get(pid);
+        map.set(pid, {
+          ...existing,
+          quantity: existing.quantity + item.quantity,
+        });
+      } else {
+        // If item doesn't exist in server, add it
+        map.set(pid, {...item});
+      }
+    }
+
+    return Array.from(map.values());
+  };
+
+  const compactCart = (cart) =>
+    cart.map(({product_id, quantity}) => ({
+      id: product_id,
+      quantity,
+    }));
+
+  const fetchServerCart = async (firebaseUser) => {
+    try {
+      const token = await firebaseUser.getIdToken(true);
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/cart/get-cart`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data?.data?.items) ? data.data.items : [];
+    } catch (err) {
+      console.error("Error fetching server cart:", err);
+      return [];
+    }
+  };
+
+  const syncToServer = async (cart, firebaseUser) => {
+    try {
+      if (!firebaseUser) return false;
+      const token = await firebaseUser.getIdToken(true);
+      const body = JSON.stringify({cart: compactCart(cart)});
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/cart/update-cart`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body,
+        }
+      );
+      if (!res.ok) throw new Error("Failed to sync cart");
+      return true;
+    } catch (err) {
+      console.error("Error syncing to server:", err);
+      return false;
+    }
+  };
+
+  // INITIALIZATION
   useEffect(() => {
-    // Don't sync until cart has been loaded at least once
-    if (!hasLoadedOnce.current || isSyncing.current) return;
+    if (loading || !products.length) return;
 
-    const saveCart = async () => {
-      isSyncing.current = true;
+    const init = async () => {
+      const isLoggedIn = !!(mongoUser && user);
+      const wasLoggedIn = prevAuthRef.current;
+      prevAuthRef.current = isLoggedIn;
 
       try {
-        if (mongoUser && user) {
-          // Logged-in user: Save to MongoDB ONLY
-          const compact = cartItems.map((i) => ({
-            id: i.product_id,
-            quantity: i.quantity,
-          }));
+        if (isLoggedIn) {
+          // User is logged in
+          if (!wasLoggedIn && !hasLoggedInRef.current) {
+            // User JUST logged in (transition from guest to logged-in)
+            console.log("User just logged in - merging carts");
 
-          const token = await user.getIdToken();
-          const res = await fetch(
-            `${import.meta.env.VITE_BACKEND_URL}/api/cart/update-cart`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({cart: compact}),
+            // 1. Fetch server cart
+            const serverCart = await fetchServerCart(user);
+            const hydratedServer = hydrateCart(serverCart);
+
+            // 2. Get localStorage cart
+            const localCart =
+              JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            const hydratedLocal = hydrateCart(localCart);
+
+            // 3. Merge carts (combine quantities if same item)
+            const merged = mergeCarts(hydratedLocal, hydratedServer);
+
+            // 4. Update state
+            setCartItems(merged);
+
+            // 5. Sync merged cart to server
+            if (merged.length > 0) {
+              await syncToServer(merged, user);
             }
-          );
 
-          if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
+            // 6. Clear localStorage
+            localStorage.removeItem(STORAGE_KEY);
+
+            hasLoggedInRef.current = true;
+          } else {
+            // User was already logged in - fetch from server
+            console.log("User already logged in - fetching from server");
+            const serverCart = await fetchServerCart(user);
+            const hydratedServer = hydrateCart(serverCart);
+            setCartItems(hydratedServer);
           }
-
-          const data = await res.json();
-
-          localStorage.removeItem("cart");
         } else {
-          // Guest user: Save to localStorage ONLY
-          const compact = cartItems.map((i) => ({
-            id: i.product_id,
-            quantity: i.quantity,
-          }));
-
-          localStorage.setItem("cart", JSON.stringify(compact));
+          const localCart = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+          const hydrated = hydrateCart(localCart);
+          setCartItems(hydrated);
+          hasLoggedInRef.current = false;
         }
       } catch (err) {
-        console.error("Failed to save cart:", err);
+        console.error("Error initializing cart:", err);
       } finally {
-        isSyncing.current = false;
+        setIsInitialized(true);
       }
     };
 
-    const timeoutId = setTimeout(saveCart, 300);
-    return () => clearTimeout(timeoutId);
-  }, [cartItems, mongoUser, user]);
+    init();
+  }, [loading, products.length, mongoUser, user]);
 
-  // Cart actions
-  const addToCart = (productId, quantity = 1) => {
+  // SYNC CHANGES
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+
+    syncTimeoutRef.current = setTimeout(async () => {
+      const isLoggedIn = !!(mongoUser && user);
+
+      try {
+        if (isLoggedIn) {
+          // User is logged in: sync to MongoDB ONLY
+          console.log("Syncing to server (logged in user)");
+          await syncToServer(cartItems, user);
+
+          if (localStorage.getItem(STORAGE_KEY)) {
+            localStorage.removeItem(STORAGE_KEY);
+          }
+        } else {
+          // User is guest: sync to localStorage ONLY
+          console.log("Syncing to localStorage (guest user)");
+          if (cartItems.length > 0) {
+            localStorage.setItem(
+              STORAGE_KEY,
+              JSON.stringify(compactCart(cartItems))
+            );
+          } else {
+            localStorage.removeItem(STORAGE_KEY);
+          }
+        }
+      } catch (err) {
+        console.error("Error syncing cart:", err);
+      }
+    }, SYNC_DELAY);
+
+    return () => clearTimeout(syncTimeoutRef.current);
+  }, [cartItems, mongoUser, user, isInitialized]);
+
+  // ACTIONS
+  const addToCart = (productId, qty = 1) => {
+    const product = products.find((p) => p.product_id === productId);
+    if (!product) return;
     setCartItems((prev) => {
       const existing = prev.find((i) => i.product_id === productId);
-      if (existing) {
-        return prev.map((i) =>
-          i.product_id === productId
-            ? {...i, quantity: i.quantity + quantity}
-            : i
-        );
-      }
-
-      const product = products.find((p) => p.product_id === productId);
-      if (!product) {
-        return prev;
-      }
-      return [...prev, {...product, quantity}];
+      return existing
+        ? prev.map((i) =>
+            i.product_id === productId ? {...i, quantity: i.quantity + qty} : i
+          )
+        : [...prev, {...product, quantity: qty}];
     });
   };
 
-  const increaseQty = (productId) => {
+  const increaseQty = (productId) =>
     setCartItems((prev) =>
       prev.map((i) =>
         i.product_id === productId ? {...i, quantity: i.quantity + 1} : i
       )
     );
-  };
 
-  const decreaseQty = (productId) => {
+  const decreaseQty = (productId) =>
     setCartItems((prev) =>
       prev
         .map((i) =>
@@ -209,17 +239,13 @@ export const CartProvider = ({children}) => {
         )
         .filter(Boolean)
     );
-  };
 
-  const removeFromCart = (productId) => {
+  const removeFromCart = (productId) =>
     setCartItems((prev) => prev.filter((i) => i.product_id !== productId));
-  };
 
-  const clearCart = () => {
-    setCartItems([]);
-  };
+  const clearCart = () => setCartItems([]);
 
-  const totalItems = cartItems.reduce((acc, i) => acc + i.quantity, 0);
+  const totalItems = cartItems.reduce((a, i) => a + i.quantity, 0);
 
   return (
     <CartContext.Provider
@@ -231,6 +257,7 @@ export const CartProvider = ({children}) => {
         removeFromCart,
         clearCart,
         totalItems,
+        isInitialized,
       }}
     >
       {children}
@@ -238,4 +265,8 @@ export const CartProvider = ({children}) => {
   );
 };
 
-export const useCart = () => useContext(CartContext);
+export const useCart = () => {
+  const ctx = useContext(CartContext);
+  if (!ctx) throw new Error("useCart must be used within CartProvider");
+  return ctx;
+};
