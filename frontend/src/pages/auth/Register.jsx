@@ -1,16 +1,17 @@
 import React, {useState} from "react";
 import {useAuth} from "../../contexts/AuthContext.jsx";
-import {User, Mail, Lock, Loader2, ArrowRight} from "lucide-react";
+import {User, Mail, Lock, Loader2, ArrowRight, CheckCircle} from "lucide-react";
 import {FcGoogle} from "react-icons/fc";
 import {useNavigate} from "react-router-dom";
 
 const Register = () => {
-  const {signInWithGoogle} = useAuth();
+  const {signInWithGoogle, registerWithEmail} = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({name: "", email: "", password: ""});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [verificationSent, setVerificationSent] = useState(false);
 
   const handleGoogleSignUp = async () => {
     setLoading(true);
@@ -24,31 +25,23 @@ const Register = () => {
     }
   };
 
-  // * TODO: Implement email registration
   const handleEmailRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/auth/email-register`,
-        {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify(formData),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        navigate("/");
-      } else {
-        setError(data.message || "Registration failed");
-      }
+      await registerWithEmail(formData.email, formData.password, formData.name);
+      setVerificationSent(true);
     } catch (err) {
-      setError(err.message);
+      if (err.code === "auth/email-already-in-use") {
+        setError("This email is already registered. Please login instead.");
+      } else if (err.code === "auth/weak-password") {
+        setError("Password is too weak. Please use a stronger password.");
+      } else if (err.code === "auth/invalid-email") {
+        setError("Invalid email address.");
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -58,6 +51,37 @@ const Register = () => {
     setFormData({...formData, [e.target.name]: e.target.value});
     setError("");
   };
+
+  if (verificationSent) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-xl shadow border border-gray-200 p-8">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-green-50 rounded-full mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+              Verify Your Email
+            </h2>
+            <p className="text-sm text-gray-600 mb-6">
+              We've sent a verification link to{" "}
+              <strong>{formData.email}</strong>
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Please check your inbox and click the verification link to
+              complete your registration.
+            </p>
+            <button
+              onClick={() => navigate("/auth/login")}
+              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium"
+            >
+              Go to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

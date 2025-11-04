@@ -38,44 +38,6 @@ const googleAuthController = asyncHandler(async (req, res, next) => {
     res.json(new ApiResponse(200, message, user));
 })
 
-const emailSignUp = asyncHandler(async (req, res, next) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    const { name, email, photoURL } = req.body;
-    if (!token) return next(new ApiError(400, "Firebase token is required"));
-
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const { uid, email: firebaseEmail, email_verified } = decodedToken;
-
-    const existingUser = await User.findOne({ firebaseUid: uid });
-    if (existingUser) return next(new ApiError(400, "User already exists"));
-
-    const user = await User.create({
-        firebaseUid: uid,
-        email: email || firebaseEmail,
-        name: name || email?.split('@')[0] || "User",
-        photoURL: photoURL || "",
-        authProvider: "email",
-        emailVerified: email_verified
-    });
-
-    res.json(new ApiResponse(200, "User created successfully", user));
-});
-
-const emailLogin = asyncHandler(async (req, res, next) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return next(new ApiError(400, "Firebase token is required"));
-
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const { uid } = decodedToken;
-
-    const user = await User.findOne({ firebaseUid: uid });
-    if (!user) return next(new ApiError(404, "User not found. Please sign up first"));
-
-    await user.save();
-
-    res.json(new ApiResponse(200, "User logged in successfully", user));
-});
-
 const updatePhone = asyncHandler(async (req, res, next) => {
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) return next(new ApiError(400, "Firebase token is required"));
@@ -136,10 +98,51 @@ const updateAddress = asyncHandler(async (req, res, next) => {
 });
 
 
+const emailSync = asyncHandler(async (req, res) => {
+    const { uid, email, name, emailVerified } = req.body;
+    const firebaseUser = req.user;
+
+    let userByEmail = await User.findOne({ email });
+
+    if (userByEmail) {
+        if (userByEmail.authProvider === 'google') {
+            return res.status(400).json({
+                success: false,
+                message: 'Email already registered via Google. Please log in with Google.'
+            });
+        }
+        // If authProvider is 'email', update existing user
+        userByEmail.name = name || userByEmail.name;
+        userByEmail.emailVerified = emailVerified ?? firebaseUser.emailVerified;
+        await userByEmail.save();
+        return res.json(new ApiResponse(200, "Email user synced successfully", userByEmail))
+    }
+
+    // If no user exists, create a new one
+    const newUser = await User.create({
+        firebaseUid: uid,
+        email,
+        name: name || email.split('@')[0],
+        authProvider: 'email',
+        emailVerified: emailVerified ?? firebaseUser.emailVerified
+    });
+    res.json(new ApiResponse(200, "Email user synced successfully", newUser))
+
+});
+
+
 // * TODO: implement pincode deliverability check
 const checkPincode = asyncHandler((req, res, next) => {
     res.json(new ApiResponse(300, "We will implement this soon"))
 
 })
 
-export { googleAuthController, emailSignUp, emailLogin, updatePhone, updateAddress, checkPincode }
+export {
+    googleAuthController,
+    emailRegister,
+    emailLogin,
+    updatePhone,
+    updateAddress,
+    checkPincode,
+    emailSync
+}

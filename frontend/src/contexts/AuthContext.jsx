@@ -5,7 +5,12 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import {auth, googleProvider} from "../config/firebase.js";
+import {
+  auth,
+  googleProvider,
+  registerWithEmail as firebaseRegister,
+  loginWithEmail as firebaseLogin,
+} from "../config/firebase.js";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -43,6 +48,34 @@ export const AuthProvider = ({children}) => {
     }
   };
 
+  const syncEmailUserWithMongo = async (firebaseUser) => {
+    try {
+      const token = await firebaseUser.getIdToken();
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/auth/email-sync`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            name: firebaseUser.displayName,
+            emailVerified: firebaseUser.emailVerified,
+          }),
+        }
+      );
+      if (!res.ok) throw new Error("Failed to sync user with MongoDB");
+      const data = await res.json();
+      return data.data;
+    } catch (error) {
+      console.error("Failed to sync email user:", error);
+      return null;
+    }
+  };
+
   const signInWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -69,6 +102,39 @@ export const AuthProvider = ({children}) => {
     }
   };
 
+  const registerWithEmail = async (email, password, name) => {
+    try {
+      const firebaseUser = await firebaseRegister(email, password, name);
+      return {user: firebaseUser};
+    } catch (err) {
+      console.error("Email registration failed:", err);
+      throw err;
+    }
+  };
+
+  const loginWithEmail = async (email, password) => {
+    try {
+      const firebaseUser = await firebaseLogin(email, password);
+
+      if (!firebaseUser.emailVerified) {
+        await firebaseSignOut(auth);
+        throw new Error(
+          "Please verify your email before logging in. Check your inbox."
+        );
+      }
+
+      const mongoData = await syncEmailUserWithMongo(firebaseUser);
+
+      setUser(firebaseUser);
+      setMongoUser(mongoData);
+
+      return {user: firebaseUser, mongoUser: mongoData};
+    } catch (err) {
+      console.error("Email login failed:", err);
+      throw err;
+    }
+  };
+
   // Handle Firebase auth state changes
   useEffect(() => {
     authStateHandledRef.current = false;
@@ -82,7 +148,18 @@ export const AuthProvider = ({children}) => {
 
       try {
         if (firebaseUser) {
-          const mongoData = await fetchMongoUser(firebaseUser);
+          // Check if it's a Google user or email user
+          const isGoogleUser = firebaseUser.providerData.some(
+            (provider) => provider.providerId === "google.com"
+          );
+
+          let mongoData;
+          if (isGoogleUser) {
+            mongoData = await fetchMongoUser(firebaseUser);
+          } else {
+            mongoData = await syncEmailUserWithMongo(firebaseUser);
+          }
+
           setUser(firebaseUser);
           setMongoUser(mongoData);
         } else {
@@ -98,7 +175,7 @@ export const AuthProvider = ({children}) => {
     });
 
     return unsubscribe;
-  }, [user]);
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -108,6 +185,8 @@ export const AuthProvider = ({children}) => {
         loading,
         signInWithGoogle,
         signOutWithGoogle,
+        registerWithEmail,
+        loginWithEmail,
       }}
     >
       {children}
@@ -115,10 +194,4 @@ export const AuthProvider = ({children}) => {
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);

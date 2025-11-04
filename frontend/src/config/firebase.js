@@ -1,6 +1,15 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth"
+import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    sendEmailVerification,
+    updateProfile
+} from "firebase/auth";
 
 const firebaseConfig = {
     apiKey: `${import.meta.env.VITE_FIREBASE_APIKEY}`,
@@ -17,7 +26,21 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+
+export const registerWithEmail = async (email, password, name) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(userCredential.user, { displayName: name });
+    await sendEmailVerification(userCredential.user);
+    return userCredential.user;
+};
+
+export const loginWithEmail = async (email, password) => {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    console.log("userCredential.user", userCredential.user)
+    return userCredential.user;
+};
 
 export const logout = async () => {
     try {

@@ -5,7 +5,7 @@ import {FcGoogle} from "react-icons/fc";
 import {useNavigate} from "react-router-dom";
 
 const Login = () => {
-  const {signInWithGoogle} = useAuth();
+  const {signInWithGoogle, loginWithEmail} = useAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({email: "", password: ""});
   const [loading, setLoading] = useState(false);
@@ -23,31 +23,30 @@ const Login = () => {
     }
   };
 
-  // TODO: Implement email login
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/auth/email-login`,
-        {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify(formData),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        navigate("/");
-      } else {
-        setError(data.message || "Login failed");
-      }
+      await loginWithEmail(formData.email, formData.password);
+      navigate("/");
     } catch (err) {
-      setError(err.message);
+      if (err.code === "auth/invalid-credential") {
+        setError("Invalid email or password. Please try again.");
+      } else if (err.code === "auth/user-not-found") {
+        setError("No account found with this email. Please register first.");
+      } else if (err.code === "auth/wrong-password") {
+        setError("Incorrect password. Please try again.");
+      } else if (err.code === "auth/invalid-email") {
+        setError("Invalid email address.");
+      } else if (err.code === "auth/too-many-requests") {
+        setError("Too many failed attempts. Please try again later.");
+      } else if (err.message.includes("verify your email")) {
+        setError(err.message);
+      } else {
+        setError(err.message || "Login failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
