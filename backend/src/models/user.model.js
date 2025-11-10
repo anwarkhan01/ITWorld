@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
-    firebaseUid: { type: String, required: true, unique: true }, // Firebase UID
+    firebaseUid: { type: String, required: true, unique: true, index: true }, // Firebase UID
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true, index: true },
     authProvider: { type: String },
     emailVerified: { type: Boolean },
     photoURL: { type: String },

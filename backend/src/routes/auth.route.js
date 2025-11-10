@@ -1,7 +1,5 @@
 import express from "express";
 import {
-    emailLogin,
-    emailRegister,
     googleAuthController,
     updateAddress,
     updatePhone,

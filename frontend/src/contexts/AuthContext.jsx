@@ -81,7 +81,6 @@ export const AuthProvider = ({children}) => {
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
       const mongoData = await fetchMongoUser(firebaseUser);
-
       setUser(firebaseUser);
       setMongoUser(mongoData);
     } catch (err) {

@@ -32,11 +32,7 @@ export default function ProductDetail() {
   const images = product.images?.length ? product.images : [product.image];
 
   const handleBuyNow = (productID) => {
-    if (!user) {
-      navigate("/auth/login");
-    } else {
-      navigate("/checkout", {state: {buyNowItemId: productID}});
-    }
+    navigate("/checkout", {state: {buyNowItemId: productID}});
   };
 
   return (

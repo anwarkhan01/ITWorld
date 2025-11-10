@@ -1,6 +1,7 @@
 import express from "express";
 import { getAuth } from "firebase-admin/auth";
 import asyncHandler from "../utils/asyncHandler.js";
+import ApiError from "../utils/ApiError.js";
 import { getCart, updateCart } from "../controllers/cart.controller.js";
 
 const router = express.Router();

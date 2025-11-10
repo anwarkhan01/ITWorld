@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
+    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
+    "fix-order-index": "node -r dotenv/config scripts/drop-order-unique-index.js"
   },
   "author": "",
   "license": "ISC",

@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useMemo} from "react";
-import {useLocation} from "react-router-dom";
+import {useLocation, useNavigate} from "react-router-dom";
 import {
   ShoppingCart,
   MapPin,
@@ -10,25 +10,34 @@ import {
   Edit2,
   Check,
   Loader2,
-  CheckCircle,
-  XCircle,
 } from "lucide-react";
 import {useCart} from "../contexts/CartContext";
 import {useAuth} from "../contexts/AuthContext.jsx";
 import {useProducts} from "../contexts/ProductsContext.jsx";
+import {v4 as uuidv4} from "uuid";
+
 const CheckoutPage = () => {
-  const {cartItems} = useCart();
+  const {
+    cartItems,
+    clearCart /* optional: if you want to clear cart after order */,
+  } = useCart();
   const {user, mongoUser} = useAuth();
   const {products} = useProducts();
   const {state} = useLocation();
+  const navigate = useNavigate();
 
   const buyNowItemId = state?.buyNowItemId;
+  const buyNowQuantity = state?.buyNowQuantity ?? 1; // if product card sends quantity, backend can pass it via state
+
   const buyNowItem = useMemo(() => {
     if (!buyNowItemId) return null;
-    return products.find((p) => p.product_id === buyNowItemId);
-  }, [buyNowItemId, products]);
+    const p = products.find((p) => p.product_id === buyNowItemId);
+    if (!p) return null;
+    return {...p, quantity: buyNowQuantity}; // ensure quantity exists for buy-now flow
+  }, [buyNowItemId, products, buyNowQuantity]);
 
   const itemsToCheckout = buyNowItem ? [buyNowItem] : cartItems;
+
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -43,7 +52,7 @@ const CheckoutPage = () => {
 
   const [errors, setErrors] = useState({});
   const [phoneError, setPhoneError] = useState("");
-  const [isEditingContact, setIsEditingContact] = useState(true);
+  const [isEditingPhone, setIsEditingPhone] = useState(true);
   const [isEditingAddress, setIsEditingAddress] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -63,18 +72,15 @@ const CheckoutPage = () => {
         paymentMethod: "",
       });
 
-      if (mongoUser.name && mongoUser.phone) {
-        setIsEditingContact(false);
-      }
-
-      if (mongoUser.address?.fullAddress && mongoUser.address?.city) {
+      if (mongoUser.phone) setIsEditingPhone(false);
+      if (mongoUser.address?.fullAddress && mongoUser.address?.city)
         setIsEditingAddress(false);
-      }
     }
-  }, [mongoUser]);
+  }, [mongoUser, user]);
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+  // subtotal should be based on itemsToCheckout (handles buy-now correctly)
+  const subtotal = itemsToCheckout.reduce(
+    (sum, item) => sum + (item.price || 0) * (item.quantity ?? 1),
     0
   );
   const tax = Math.round(subtotal * 0.18);
@@ -109,23 +115,19 @@ const CheckoutPage = () => {
   ];
 
   const validatePhone = (phoneNumber) => {
-    const digitsOnly = phoneNumber.replace(/\D/g, "");
-
+    const digitsOnly = (phoneNumber || "").replace(/\D/g, "");
     if (!digitsOnly) {
       setPhoneError("");
       return false;
     }
-
     if (digitsOnly.length !== 10) {
       setPhoneError("Phone number must be exactly 10 digits");
       return false;
     }
-
     if (!/^[6-9]/.test(digitsOnly)) {
       setPhoneError("Phone number must start with 6, 7, 8, or 9");
       return false;
     }
-
     setPhoneError("");
     return true;
   };
@@ -136,48 +138,40 @@ const CheckoutPage = () => {
     if (name === "phone") {
       const phoneValue = value.replace(/\D/g, "").slice(0, 10);
       setFormData((prev) => ({...prev, [name]: phoneValue}));
-      if (phoneValue) {
-        validatePhone(phoneValue);
-      } else {
-        setPhoneError("");
-      }
+      if (phoneValue) validatePhone(phoneValue);
+      else setPhoneError("");
     } else if (name === "pincode") {
       const pincodeValue = value.replace(/\D/g, "").slice(0, 6);
       setFormData((prev) => ({...prev, [name]: pincodeValue}));
+    } else if (name === "paymentMethod") {
+      setFormData((prev) => ({...prev, [name]: value}));
     } else {
       setFormData((prev) => ({...prev, [name]: value}));
     }
 
-    if (errors[name]) {
-      setErrors((prev) => ({...prev, [name]: ""}));
-    }
+    if (errors[name]) setErrors((prev) => ({...prev, [name]: ""}));
   };
 
   const handleContactSave = async () => {
     const contactErrors = {};
 
-    if (!formData.name.trim()) {
-      contactErrors.name = "Name is required";
-    } else if (formData.name.trim().length < 3) {
+    if (!formData.name.trim()) contactErrors.name = "Name is required";
+    else if (formData.name.trim().length < 3)
       contactErrors.name = "Name must be at least 3 characters";
-    }
 
-    if (!formData.phone.trim()) {
+    if (!formData.phone.trim())
       contactErrors.phone = "Phone number is required";
-    } else if (!validatePhone(formData.phone)) {
+    else if (!validatePhone(formData.phone))
       contactErrors.phone = phoneError || "Invalid phone number";
-    }
 
     if (Object.keys(contactErrors).length > 0) {
       setErrors((prev) => ({...prev, ...contactErrors}));
       return;
     }
 
-    // Save phone to backend
     setLoading(true);
     try {
       const token = await user.getIdToken();
-
       const phoneResponse = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/api/auth/update-phone`,
         {
@@ -191,16 +185,15 @@ const CheckoutPage = () => {
       );
 
       const phoneData = await phoneResponse.json();
-
       if (phoneData.success) {
-        setIsEditingContact(false);
-        alert("Contact information saved successfully!");
+        setIsEditingPhone(false);
+        console.log("Contact information saved successfully!");
       } else {
-        alert("Failed to save contact details. Please try again.");
+        console.log("Failed to save contact details. Please try again.");
       }
     } catch (err) {
       console.error("Error saving contact details:", err);
-      alert("Error saving contact details. Please try again.");
+      console.log("Error saving contact details. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -208,32 +201,24 @@ const CheckoutPage = () => {
 
   const validateForm = () => {
     const newErrors = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
-    } else if (formData.name.trim().length < 3) {
+    if (!formData.name.trim()) newErrors.name = "Name is required";
+    else if (formData.name.trim().length < 3)
       newErrors.name = "Name must be at least 3 characters";
-    }
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Phone number is required";
-    } else if (!validatePhone(formData.phone)) {
+    if (!formData.phone.trim()) newErrors.phone = "Phone number is required";
+    else if (!validatePhone(formData.phone))
       newErrors.phone = phoneError || "Invalid phone number";
-    }
 
     if (!formData.address.trim()) newErrors.address = "Address is required";
     if (!formData.city.trim()) newErrors.city = "City is required";
     if (!formData.state.trim()) newErrors.state = "State is required";
 
-    if (!formData.pincode.trim()) {
-      newErrors.pincode = "Pincode is required";
-    } else if (!/^\d{6}$/.test(formData.pincode)) {
+    if (!formData.pincode.trim()) newErrors.pincode = "Pincode is required";
+    else if (!/^\d{6}$/.test(formData.pincode))
       newErrors.pincode = "Enter a valid 6-digit pincode";
-    }
 
-    if (!formData.paymentMethod) {
+    if (!formData.paymentMethod)
       newErrors.paymentMethod = "Please select a payment method";
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -241,26 +226,22 @@ const CheckoutPage = () => {
 
   const handleAddressSave = async () => {
     const addressErrors = {};
-
     if (!formData.address.trim()) addressErrors.address = "Address is required";
     if (!formData.city.trim()) addressErrors.city = "City is required";
     if (!formData.state.trim()) addressErrors.state = "State is required";
-    if (!formData.pincode.trim()) {
-      addressErrors.pincode = "Pincode is required";
-    } else if (!/^\d{6}$/.test(formData.pincode)) {
+
+    if (!formData.pincode.trim()) addressErrors.pincode = "Pincode is required";
+    else if (!/^\d{6}$/.test(formData.pincode))
       addressErrors.pincode = "Enter a valid 6-digit pincode";
-    }
 
     if (Object.keys(addressErrors).length > 0) {
       setErrors((prev) => ({...prev, ...addressErrors}));
       return;
     }
 
-    // Save to backend
     setLoading(true);
     try {
       const token = await user.getIdToken();
-
       const addressResponse = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/api/auth/update-address`,
         {
@@ -283,35 +264,114 @@ const CheckoutPage = () => {
       );
 
       const addressData = await addressResponse.json();
-
       if (addressData.success) {
         setIsEditingAddress(false);
-        alert("Address saved successfully!");
+        console.log("Address saved successfully!");
       } else {
-        alert("Failed to save address. Please try again.");
+        console.log("Failed to save address. Please try again.");
       }
     } catch (err) {
       console.error("Error saving address:", err);
-      alert("Error saving address. Please try again.");
+      console.log("Error saving address. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePlaceOrder = () => {
-    if (!validateForm()) {
-      return;
+  const buildOrderPayload = () => {
+    const userId = mongoUser?._id || user?.uid || ""; // prefer mongo user id if available
+    const productsList = itemsToCheckout.map((it) => ({
+      product_id: it.product_id,
+      quantity: it.quantity ?? 1,
+      product_price: it.price,
+    }));
+
+    const subtotal = productsList.reduce(
+      (sum, p) => sum + p.product_price * p.quantity,
+      0
+    );
+
+    const tax = Math.round(subtotal * 0.18);
+    const deliveryCharge = subtotal > 50000 ? 0 : 500;
+
+    const totalPrice = subtotal + tax + deliveryCharge;
+
+    return {
+      userid: userId,
+      useremail: mongoUser.email,
+      productData: {
+        totalPrice,
+        products: productsList,
+      },
+      shipping: {
+        name: formData.name,
+        phone: formData.phone,
+        address: formData.address,
+        landmark: formData.landmark,
+        city: formData.city,
+        state: formData.state,
+        country: formData.country,
+        pincode: formData.pincode,
+      },
+      paymentMethod: formData.paymentMethod,
+      meta: {
+        fromBuyNow: Boolean(buyNowItem),
+        createdAt: new Date().toISOString(),
+      },
+    };
+  };
+
+  // Place order: validates, builds payload, (optionally) sends to backend and handles response.
+  const handlePlaceOrder = async () => {
+    if (!validateForm()) return;
+
+    let orderToken = sessionStorage.getItem("orderToken");
+    if (!orderToken) {
+      orderToken = uuidv4();
+      sessionStorage.setItem("orderToken", orderToken);
     }
 
-    setIsProcessing(true);
+    const orderPayload = {
+      ...buildOrderPayload(),
+      orderToken,
+    };
 
-    setTimeout(() => {
-      console.log("Order placed:", {formData, cartItems, total});
-      alert(
-        "Order placed successfully! 🎉\n\nOrder details logged to console."
+    setIsProcessing(true);
+    try {
+      const token = await user.getIdToken();
+      const resp = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/order/create-order`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(orderPayload),
+        }
       );
+
+      const data = await resp.json();
+      console.log("data", data);
+      if (data.success) {
+        if (data.data.existing) {
+          console.log("Order already exist");
+          navigate(`/orders/${data.data.orderId}`);
+          return;
+        }
+        console.log(
+          `Order placed successfully! Order ID: ${data.data.orderId}`
+        );
+        navigate(`/orders/${data.data.orderId}`);
+      } else {
+        console.log(data.message || "Order failed");
+      }
+    } catch (err) {
+      console.error(err);
+      console.log("Something went wrong placing your order.");
+    } finally {
       setIsProcessing(false);
-    }, 2000);
+    }
   };
 
   if (itemsToCheckout.length === 0) {
@@ -339,110 +399,111 @@ const CheckoutPage = () => {
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Contact Information */}
             <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                  Contact Information
-                </h2>
-                {!isEditingContact && (
+              {!user ? (
+                <div className="text-center py-6">
+                  <p className="text-gray-700 mb-4 text-sm sm:text-base">
+                    Please log in to continue with checkout.
+                  </p>
                   <button
-                    type="button"
-                    onClick={() => setIsEditingContact(true)}
-                    className="flex items-center text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    onClick={() =>
+                      navigate("/auth/login", {state: {page: "/checkout"}})
+                    }
+                    className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base font-medium"
                   >
-                    <Edit2 className="w-4 h-4 mr-1" />
-                    Edit
+                    Continue to Login
                   </button>
-                )}
-              </div>
-
-              {isEditingContact ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Full Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      className={`w-full px-3 sm:px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
-                        errors.name ? "border-red-500" : "border-gray-300"
-                      }`}
-                      placeholder="Enter your full name"
-                    />
-                    {errors.name && (
-                      <p className="mt-1 text-xs sm:text-sm text-red-500">
-                        {errors.name}
-                      </p>
-                    )}
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                      Contact Information
+                    </h2>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone Number <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      maxLength="10"
-                      className={`w-full px-3 sm:px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
-                        errors.phone || phoneError
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
-                      placeholder="10-digit mobile number"
-                    />
+                  <div className="bg-gray-100 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-gray-500">Full Name</p>
+                    <p className="font-medium text-gray-900">
+                      {formData.name || "Name not set"}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col mb-4 bg-gray-100 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium text-gray-700">
+                        Phone Number
+                      </label>
+                      {!isEditingPhone && (
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingPhone(true)}
+                          className="flex items-center text-blue-600 hover:text-blue-700 text-sm font-medium"
+                        >
+                          <Edit2 className="w-4 h-4 mr-1" />
+                          Edit
+                        </button>
+                      )}
+                    </div>
+
+                    {isEditingPhone ? (
+                      <>
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          maxLength="10"
+                          className={`px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
+                            errors.phone || phoneError
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
+                          placeholder="Enter your 10-digit phone number"
+                        />
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            type="button"
+                            onClick={handleContactSave}
+                            disabled={loading}
+                            className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                          >
+                            {loading ? (
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            ) : (
+                              <Check className="w-4 h-4 mr-2" />
+                            )}
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                phone: mongoUser?.phone || "",
+                              }));
+                              setIsEditingPhone(false);
+                              setPhoneError("");
+                              setErrors((prev) => ({...prev, phone: ""}));
+                            }}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-gray-700">
+                        {formData.phone || "Phone number not set"}
+                      </p>
+                    )}
+
                     {(errors.phone || phoneError) && (
                       <p className="mt-1 text-xs sm:text-sm text-red-500">
                         {errors.phone || phoneError}
                       </p>
                     )}
                   </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleContactSave}
-                      disabled={loading}
-                      className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                    >
-                      {loading ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <Check className="w-4 h-4 mr-2" />
-                      )}
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          name: mongoUser?.name || "",
-                          phone: mongoUser?.phone || "",
-                        }));
-                        setIsEditingContact(false);
-                        setPhoneError("");
-                        setErrors((prev) => ({...prev, name: "", phone: ""}));
-                      }}
-                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="font-medium text-gray-900 mb-2">
-                    {formData.name || "Name not set"}
-                  </p>
-                  <p className="text-gray-600">
-                    Phone: {formData.phone || "Phone number not set"}
-                  </p>
-                </div>
+                </>
               )}
             </div>
 
@@ -626,7 +687,7 @@ const CheckoutPage = () => {
                   </div>
                 </div>
               ) : (
-                <div className="bg-gray-50 rounded-lg p-4">
+                <div className="bg-gray-100 rounded-lg p-4">
                   <p className="text-gray-900">{formData.address}</p>
                   {formData.landmark && (
                     <p className="text-gray-600 mt-1">
@@ -696,7 +757,7 @@ const CheckoutPage = () => {
               </h2>
 
               <div className="space-y-4 mb-6 max-h-64 overflow-y-auto">
-                {itemsToCheckout.toReversed().map((item) => (
+                {[...itemsToCheckout].reverse().map((item) => (
                   <div
                     key={item.product_id}
                     className="flex items-start space-x-3"
@@ -718,12 +779,15 @@ const CheckoutPage = () => {
                       </p>
                       <p className="text-xs text-gray-500">{item.brand}</p>
                       <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                        Qty: {item.quantity} × ₹
-                        {item.price.toLocaleString("en-IN")}
+                        Qty: {item.quantity ?? 1} × ₹
+                        {(item.price || 0).toLocaleString("en-IN")}
                       </p>
                     </div>
                     <p className="text-xs sm:text-sm font-medium text-gray-900">
-                      ₹{(item.price * item.quantity).toLocaleString("en-IN")}
+                      ₹
+                      {(
+                        (item.price || 0) * (item.quantity ?? 1)
+                      ).toLocaleString("en-IN")}
                     </p>
                   </div>
                 ))}

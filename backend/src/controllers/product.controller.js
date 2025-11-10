@@ -27,10 +27,15 @@ const importProducts = asyncHandler(async (req, res, next) => {
         const filteredData = data.filter((item) =>
             Object.values(item).some((val) => val !== undefined && val !== null && val !== "")
         );
-        console.log(`Importing ${data.length - 1} products from Excel...`);
 
-        for (const item of filteredData) {
-            // Normalize fields to match schema
+        if (filteredData.length === 0) {
+            return next(new ApiError(400, "No valid data found in the file"));
+        }
+
+        console.log(`Importing ${filteredData.length} products from Excel...`);
+
+        // Use bulk operations for better performance
+        const bulkOps = filteredData.map((item) => {
             const updateData = {
                 product_id: item.id || item.product_id || null,
                 product_name: item.product_name || "",
@@ -39,10 +44,10 @@ const importProducts = asyncHandler(async (req, res, next) => {
                 intro_description: item.intro_description || item.intro || "",
                 image: item.image || "",
                 category: item.category || "Other",
+                sub_category: item.sub_category || "",
                 specs: typeof item.specs === "object" && item.specs !== null
                     ? item.specs
                     : parseSpecs(item.specs),
-
                 highlights: Array.isArray(item.highlights)
                     ? item.highlights
                     : item.highlights
@@ -54,37 +59,61 @@ const importProducts = asyncHandler(async (req, res, next) => {
                         ? String(item.features).split(",").map((f) => f.trim())
                         : [],
                 warranty: item.warranty
-
             };
 
-            await Product.findOneAndUpdate(
-                { product_id: updateData.product_id }, // match existing
-                updateData,
-                { upsert: true, new: true, setDefaultsOnInsert: true }
-            );
+            return {
+                updateOne: {
+                    filter: { product_id: updateData.product_id },
+                    update: { $set: updateData },
+                    upsert: true
+                }
+            };
+        });
+
+        // Execute bulk operations in batches
+        const batchSize = 100;
+        for (let i = 0; i < bulkOps.length; i += batchSize) {
+            const batch = bulkOps.slice(i, i + batchSize);
+            await Product.bulkWrite(batch, { ordered: false });
         }
 
-        res.json(new ApiResponse(200, "Products Imported/Updated Successfully"))
         console.log("Products imported/updated successfully");
+        return res.json(new ApiResponse(200, `Successfully imported/updated ${filteredData.length} products`));
     } catch (err) {
-        res.json(new ApiError(400, "Some Error Occured While Imporing Data From Excel To MongoDB Database", err, err.stack))
         console.error("Error importing products:", err.message);
+        return next(new ApiError(500, "Error occurred while importing products", err.message));
     }
 })
 
 const getproducts = asyncHandler(async (req, res, next) => {
-    const products = await Product.find();
-    res.json(new ApiResponse(200, "product data fethced successfullly!", products));
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const [products, total] = await Promise.all([
+        Product.find().skip(skip).limit(limit).lean(),
+        Product.countDocuments()
+    ]);
+
+    res.json(new ApiResponse(200, "Product data fetched successfully!", {
+        products,
+        pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit)
+        }
+    }));
 })
 
 const getRandomProducts = asyncHandler(async (req, res, next) => {
-    const limit = parseInt(req.query.limit) || 20;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100); // Cap at 100
     const products = await Product.aggregate([{ $sample: { size: limit } }]);
-    res.json(new ApiResponse(200, "random products fetched successfully", { products: products, count: products.length }))
+    res.json(new ApiResponse(200, "Random products fetched successfully", { products: products, count: products.length }));
 })
 
 const getFilterProducts = asyncHandler(async (req, res, next) => {
-    const { category, brand, minPrice, maxPrice, name } = req.query;
+    const { category, brand, minPrice, maxPrice, name, page = 1, limit = 50, sort = "price", order = "asc" } = req.query;
 
     const filters = {};
 
@@ -99,12 +128,100 @@ const getFilterProducts = asyncHandler(async (req, res, next) => {
         filters.product_name = { $regex: name, $options: "i" };
     }
 
-    const products = await Product.find(filters)
-        .sort({ price: 1 })
-        .limit(50);
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
 
-    res.json(new ApiError(200, "Filtered Product Fetched Successfully", { count: products.length, products },))
+    const sortOrder = order === "desc" ? -1 : 1;
+    const sortObj = { [sort]: sortOrder };
+
+    const [products, total] = await Promise.all([
+        Product.find(filters)
+            .sort(sortObj)
+            .skip(skip)
+            .limit(limitNum)
+            .lean(),
+        Product.countDocuments(filters)
+    ]);
+
+    res.json(new ApiResponse(200, "Filtered Product Fetched Successfully", {
+        count: products.length,
+        products,
+        pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total,
+            pages: Math.ceil(total / limitNum)
+        }
+    }));
 })
 
-export { importProducts, getproducts, getRandomProducts, getFilterProducts }
+const getCategorizedProducts = asyncHandler(async (req, res, next) => {
+    const {
+        category,
+        brand,
+        minPrice,
+        maxPrice,
+        sort = "price",
+        order = "asc",
+        page = 1,
+        limit = 20
+    } = req.query;
+    const subcategory = req.query.subcategory || req.query.subCategory;
+    const filters = {};
+
+    // Build category filters
+    if (category) {
+        filters.category = { $regex: new RegExp(category, 'i') };
+    }
+
+    if (subcategory) {
+        filters.sub_category = { $regex: new RegExp(subcategory, 'i') };
+    }
+
+    if (brand) {
+        const brands = brand.split(",").map((b) => b.trim()).filter(Boolean);
+        if (brands.length > 1) {
+            filters.brand = { $in: brands.map((b) => new RegExp(b, "i")) };
+        } else {
+            filters.brand = { $regex: new RegExp(brands[0], "i") };
+        }
+    }
+
+    if (minPrice || maxPrice) {
+        filters.price = {};
+        if (minPrice) filters.price.$gte = Number(minPrice);
+        if (maxPrice) filters.price.$lte = Number(maxPrice);
+    }
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const sortOrder = order === "desc" ? -1 : 1;
+    const sortObj = { [sort]: sortOrder };
+
+    const [products, total] = await Promise.all([
+        Product.find(filters)
+            .sort(sortObj)
+            .skip(skip)
+            .limit(limitNum)
+            .lean(),
+        Product.countDocuments(filters)
+    ]);
+
+    res.json(new ApiResponse(200, "Categorized Products Fetched Successfully", {
+        category,
+        products,
+        total: products.length,
+        pagination: {
+            page: pageNum,
+            limit: limitNum,
+            totalDocuments: total,
+            totalPages: Math.ceil(total / limitNum)
+        }
+    }));
+});
+
+export { importProducts, getproducts, getRandomProducts, getFilterProducts, getCategorizedProducts }
 

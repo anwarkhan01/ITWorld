@@ -2,7 +2,7 @@ import React, {useState} from "react";
 import {useAuth} from "../../contexts/AuthContext.jsx";
 import {User, Mail, Lock, Loader2, ArrowRight} from "lucide-react";
 import {FcGoogle} from "react-icons/fc";
-import {useNavigate} from "react-router-dom";
+import {useNavigate, useLocation} from "react-router-dom";
 
 const Login = () => {
   const {signInWithGoogle, loginWithEmail} = useAuth();
@@ -10,11 +10,18 @@ const Login = () => {
   const [formData, setFormData] = useState({email: "", password: ""});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const {state} = useLocation();
+  let prevPage = state?.page;
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
       await signInWithGoogle();
+      if (prevPage === "/checkout") {
+        navigate("/checkout");
+        return;
+      }
+
       navigate("/");
     } catch (err) {
       setError(err.message);
@@ -30,6 +37,10 @@ const Login = () => {
 
     try {
       await loginWithEmail(formData.email, formData.password);
+      if (prevPage === "/checkout") {
+        navigate("/checkout");
+        return;
+      }
       navigate("/");
     } catch (err) {
       if (err.code === "auth/invalid-credential") {

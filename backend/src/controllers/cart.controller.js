@@ -10,9 +10,19 @@ const getCart = asyncHandler(async (req, res, next) => {
 
 const updateCart = asyncHandler(async (req, res, next) => {
     const { cart } = req.body;
-    if (!Array.isArray(cart)) return next(new ApiError(300, "Cart is not in required format"));
+    if (!Array.isArray(cart)) return next(new ApiError(400, "Cart is not in required format"));
 
-    const items = cart.map((i) => ({ productId: i.id, quantity: i.quantity }));
+    // Validate and sanitize cart items
+    const items = cart
+        .filter((i) => i.id && i.quantity && i.quantity > 0)
+        .map((i) => ({
+            productId: String(i.id).trim(),
+            quantity: Math.max(1, Math.min(100, parseInt(i.quantity) || 1)) // Limit quantity between 1-100
+        }));
+
+    if (items.length === 0 && cart.length > 0) {
+        return next(new ApiError(400, "Invalid cart items provided"));
+    }
 
     const updatedCart = await Cart.findOneAndUpdate(
         { userId: req.userId },
@@ -20,7 +30,7 @@ const updateCart = asyncHandler(async (req, res, next) => {
         { new: true, upsert: true }
     );
 
-    res.json(new ApiResponse(200, "Cart Updated Successfully", updatedCart))
+    res.json(new ApiResponse(200, "Cart Updated Successfully", updatedCart));
 })
 
 export { getCart, updateCart }

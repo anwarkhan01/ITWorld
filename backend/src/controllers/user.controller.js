@@ -7,36 +7,42 @@ import admin from "../config/firebase.js";
 
 const googleAuthController = asyncHandler(async (req, res, next) => {
     const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-        return next(new ApiError(400, "Firebase token is required"));
-    }
+    if (!token) return next(new ApiError(400, "Firebase token is required"));
+
     const decodedToken = await admin.auth().verifyIdToken(token);
     const { uid, email, name, picture } = decodedToken;
-    const user = await User.findOneAndUpdate(
-        { firebaseUid: uid },
-        {
-            $set: {
-                name: name || "User",
-                photoURL: picture || "",
-                authProvider: "google",
-                emailVerified: true,
-            },
-            $setOnInsert: {
-                email: email
-            }
-        },
-        { new: true, upsert: true }
-    );
+
+    let user = await User.findOne({
+        $or: [{ firebaseUid: uid }, { email }],
+    });
+
+    if (user) {
+        user.firebaseUid = uid;
+        user.name = name || user.name;
+        user.photoURL = picture || user.photoURL;
+        user.authProvider = "google";
+        user.emailVerified = true;
+        await user.save();
+    } else {
+        user = await User.create({
+            firebaseUid: uid,
+            name: name || "User",
+            photoURL: picture || "",
+            authProvider: "google",
+            emailVerified: true,
+            email,
+        });
+    }
 
     const createdAt = Math.floor(new Date(user.createdAt).getTime() / 1000);
     const updatedAt = Math.floor(new Date(user.updatedAt).getTime() / 1000);
-
-    const message = createdAt === updatedAt
-        ? "User Created Successfully"
-        : "User Updated Successfully";
+    const message =
+        createdAt === updatedAt
+            ? "User Created Successfully"
+            : "User Updated Successfully";
 
     res.json(new ApiResponse(200, message, user));
-})
+});
 
 const updatePhone = asyncHandler(async (req, res, next) => {
     const token = req.headers.authorization?.split(" ")[1];
@@ -46,8 +52,12 @@ const updatePhone = asyncHandler(async (req, res, next) => {
     const uid = decodedToken.uid;
 
     const { phone } = req.body;
-    console.log(req.body)
     if (!phone) return next(new ApiError(400, "Phone number is required"));
+
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!phoneRegex.test(phone.replace(/\D/g, ''))) {
+        return next(new ApiError(400, "Invalid phone number format"));
+    }
 
     const user = await User.findOneAndUpdate(
         { firebaseUid: uid },
@@ -70,19 +80,26 @@ const updateAddress = asyncHandler(async (req, res, next) => {
     const { address } = req.body;
     if (!address) return next(new ApiError(400, "Address object is required"));
 
+    if (address.pincode !== undefined) {
+        const pincodeRegex = /^[1-9][0-9]{5}$/;
+        if (!pincodeRegex.test(address.pincode)) {
+            return next(new ApiError(400, "Invalid pincode format"));
+        }
+    }
+
     const updateFields = {};
     if (address.fullAddress !== undefined)
-        updateFields["address.fullAddress"] = address.fullAddress;
+        updateFields["address.fullAddress"] = address.fullAddress.trim();
     if (address.landmark !== undefined)
-        updateFields["address.landmark"] = address.landmark;
+        updateFields["address.landmark"] = address.landmark.trim();
     if (address.city !== undefined)
-        updateFields["address.city"] = address.city;
+        updateFields["address.city"] = address.city.trim();
     if (address.state !== undefined)
-        updateFields["address.state"] = address.state;
+        updateFields["address.state"] = address.state.trim();
     if (address.country !== undefined)
-        updateFields["address.country"] = address.country;
+        updateFields["address.country"] = address.country.trim();
     if (address.pincode !== undefined)
-        updateFields["address.pincode"] = address.pincode;
+        updateFields["address.pincode"] = address.pincode.trim();
 
     const user = await User.findOneAndUpdate(
         { firebaseUid: uid },
@@ -97,39 +114,37 @@ const updateAddress = asyncHandler(async (req, res, next) => {
     );
 });
 
+const emailSync = asyncHandler(async (req, res, next) => {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return next(new ApiError(400, "Firebase token is required"));
 
-const emailSync = asyncHandler(async (req, res) => {
-    const { uid, email, name, emailVerified } = req.body;
-    const firebaseUser = req.user;
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const { uid, email: decodedEmail } = decodedToken;
 
-    let userByEmail = await User.findOne({ email });
+    const { uid: bodyUid, email, name, emailVerified } = req.body;
+
+    const userEmail = email || decodedEmail;
+    const userId = bodyUid || uid;
+
+    let userByEmail = await User.findOne({ email: userEmail });
 
     if (userByEmail) {
-        if (userByEmail.authProvider === 'google') {
-            return res.status(400).json({
-                success: false,
-                message: 'Email already registered via Google. Please log in with Google.'
-            });
-        }
-        // If authProvider is 'email', update existing user
+        userByEmail.firebaseUid = userId;
         userByEmail.name = name || userByEmail.name;
-        userByEmail.emailVerified = emailVerified ?? firebaseUser.emailVerified;
+        userByEmail.emailVerified = emailVerified ?? decodedToken.email_verified ?? false;
         await userByEmail.save();
-        return res.json(new ApiResponse(200, "Email user synced successfully", userByEmail))
+        return res.json(new ApiResponse(200, "Email user synced successfully", userByEmail));
     }
 
-    // If no user exists, create a new one
     const newUser = await User.create({
-        firebaseUid: uid,
-        email,
-        name: name || email.split('@')[0],
+        firebaseUid: userId,
+        email: userEmail,
+        name: name || userEmail.split('@')[0],
         authProvider: 'email',
-        emailVerified: emailVerified ?? firebaseUser.emailVerified
+        emailVerified: emailVerified ?? decodedToken.email_verified ?? false
     });
-    res.json(new ApiResponse(200, "Email user synced successfully", newUser))
-
+    return res.json(new ApiResponse(200, "Email user synced successfully", newUser));
 });
-
 
 // * TODO: implement pincode deliverability check
 const checkPincode = asyncHandler((req, res, next) => {
@@ -139,8 +154,6 @@ const checkPincode = asyncHandler((req, res, next) => {
 
 export {
     googleAuthController,
-    emailRegister,
-    emailLogin,
     updatePhone,
     updateAddress,
     checkPincode,

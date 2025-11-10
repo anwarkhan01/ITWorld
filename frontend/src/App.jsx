@@ -10,6 +10,8 @@ import Register from "./pages/auth/Register.jsx";
 import Profile from "./pages/Profile.jsx";
 import CheckoutPage from "./pages/CheckOut.jsx";
 import {useAuth} from "./contexts/AuthContext.jsx";
+import Orders from "./pages/Orders.jsx";
+import OrderDetail from "./pages/OrderDetail.jsx";
 
 const ProtectedRoute = ({children}) => {
   const {user, loading} = useAuth();
@@ -40,9 +42,9 @@ const AuthRoute = ({children}) => {
     );
   }
 
-  if (user) {
-    return <Navigate to="/" replace />;
-  }
+  // if (user) {
+  //   return <Navigate to="/" replace />;
+  // }
 
   return children;
 };
@@ -57,7 +59,8 @@ const App = () => {
         <Route path="cart" element={<Cart />} />
         <Route path="contact" element={<Contact />} />
         <Route path="checkout" element={<CheckoutPage />} />
-
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/orders/:id" element={<OrderDetail />} />
         {/* Protected Profile Route */}
         <Route
           path="profile"

@@ -1,22 +1,50 @@
-import express from "express"
-import cors from "cors"
-import productRouter from "./routes/product.route.js"
-import authRouter from "./routes/auth.route.js"
-import helmet from "helmet"
-import cartRouter from "./routes/cart.route.js"
-import ApiError from "./utils/ApiError.js"
+import express from "express";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
+import productRouter from "./routes/product.route.js";
+import authRouter from "./routes/auth.route.js";
+import adminRouter from "./routes/admin.route.js";
+import orderRouter from "./routes/order.route.js";
+import helmet from "helmet";
+import cartRouter from "./routes/cart.route.js";
+import ApiError from "./utils/ApiError.js";
 
-const app = express()
-app.use(express.json())
-app.use(helmet())
+const app = express();
+
+// Security middleware
+app.use(helmet());
 app.use(cors({
     origin: process.env.FRONTEND_URL,
 }))
+// Body parser with size limit
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Rate limiting
+// const limiter = rateLimit({
+//     windowMs: 15 * 60 * 1000, // 15 minutes
+//     max: 100, // Limit each IP to 100 requests per windowMs
+//     message: "Too many requests from this IP, please try again later.",
+//     standardHeaders: true,
+//     legacyHeaders: false,
+// });
+
+// const authLimiter = rateLimit({
+//     windowMs: 15 * 60 * 1000, // 15 minutes
+//     max: 5, // Limit auth endpoints to 5 requests per windowMs
+//     message: "Too many authentication attempts, please try again later.",
+//     standardHeaders: true,
+//     legacyHeaders: false,
+// });
+
+// app.use("/api/", limiter);
+// app.use("/api/auth/", authLimiter);
 
 app.use("/api/auth", authRouter);
-app.use("/api/cart", cartRouter)
-app.use("/api/products", productRouter)
-
+app.use("/api/cart", cartRouter);
+app.use("/api/products", productRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/order", orderRouter);
 app.use("/", (req, res, next) => {
     next(
         new ApiError(
