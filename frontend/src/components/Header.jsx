@@ -10,9 +10,12 @@ import {
   User,
   Cpu,
   Laptop,
+  Computer,
   Tv,
+  Keyboard,
   Package,
   Gamepad2,
+  Backpack,
   Headphones,
   ChevronDown,
   Search,
@@ -23,8 +26,26 @@ import {motion, AnimatePresence} from "framer-motion";
 const categories = [
   {
     name: "PC",
-    icon: Cpu,
+    icon: Computer,
     subcategories: ["Prebuilt PC", "Custom PC", "Branded PC"],
+  },
+  {
+    name: "PC Components",
+    icon: Cpu,
+    subcategories: [
+      "Processors",
+      "CPUs",
+      "GPUs",
+      "SSDs",
+      "HDDs",
+      "Motherboards",
+      "RAM",
+      "Graphics Cards",
+      "Power Supplies",
+      "Storage Drives",
+      "Cooling Solutions",
+      "PC Cases",
+    ],
   },
   {
     name: "Laptop",
@@ -72,20 +93,32 @@ const categories = [
     ],
   },
   {
-    name: "Accessories",
-    icon: Headphones,
+    name: "Peripherals",
+    icon: Keyboard,
     subcategories: [
       "Keyboards",
       "Mouse",
       "Headphones",
+      "Monitors",
       "Webcams",
       "Speakers",
       "USB Hubs",
       "Cables & Adapters",
       "Storage Devices",
       "Printers",
+    ],
+  },
+  {
+    name: "Accessories",
+    icon: Backpack,
+    subcategories: [
       "Laptop Bags",
+      "Cooling Pads",
+      "Docking Stations",
       "Screen Protectors",
+      "Mouse Pads",
+      "Laptop Stands",
+      "Laptop Covers",
     ],
   },
 ];
@@ -179,7 +212,7 @@ const Navbar = () => {
     if (e) e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery("");
+      // setSearchQuery("");
       setShowMobileSearch(false);
       setIsOpen(false);
     }
@@ -208,7 +241,7 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Search Bar */}
-          {/* <div className="hidden md:flex flex-1 max-w-md mx-4">
+          <div className="hidden md:flex flex-1 max-w-md mx-4">
             <div className="relative w-full">
               <input
                 type="text"
@@ -224,23 +257,23 @@ const Navbar = () => {
               />
               <button
                 onClick={handleSearch}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400 transition-colors"
+                className="absolute right-2 p-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400 transition-colors"
               >
                 <Search className="w-5 h-5" />
               </button>
             </div>
-          </div> */}
+          </div>
 
           {/* Right Actions */}
           <div className="flex items-center md:gap-8 gap-3">
             {/* Mobile Search Icon */}
-            {/* <button
+            <button
               onClick={() => setShowMobileSearch(!showMobileSearch)}
               className="md:hidden text-gray-300 hover:text-blue-400 transition-colors"
               aria-label="Search"
             >
               <Search className="w-6 h-6" />
-            </button> */}
+            </button>
 
             {/* Cart */}
             <Link
@@ -323,7 +356,7 @@ const Navbar = () => {
                   />
                   <button
                     onClick={handleSearch}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400 transition-colors"
+                    className="absolute right-2 p-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400 transition-colors"
                   >
                     <Search className="w-5 h-5" />
                   </button>
@@ -368,7 +401,7 @@ const Navbar = () => {
                         animate={{opacity: 1, y: 0}}
                         exit={{opacity: 0, y: 10}}
                         transition={{duration: 0.15}}
-                        className="fixed mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden z-[60]"
+                        className="fixed mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden z-60"
                         style={{
                           top:
                             categoryRefs.current[

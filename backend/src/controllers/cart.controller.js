@@ -7,7 +7,6 @@ const getCart = asyncHandler(async (req, res, next) => {
     const cart = await Cart.findOne({ userId: req.userId }).lean();
     res.json(new ApiResponse(200, "Cart Data Fetch Successfully", cart));
 })
-
 const updateCart = asyncHandler(async (req, res, next) => {
     const { cart } = req.body;
     if (!Array.isArray(cart)) return next(new ApiError(400, "Cart is not in required format"));

@@ -1,14 +1,17 @@
-import {useMemo} from "react";
+import {useMemo, useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
 import {Trash2, Plus, Minus, Truck} from "lucide-react";
 import {useCart} from "../contexts/CartContext.jsx";
 import {useAuth} from "../contexts/AuthContext.jsx";
+import Toast from "../components/Toast.jsx";
 
 export default function Cart() {
   const {cartItems, increaseQty, decreaseQty, removeFromCart, clearCart} =
     useCart();
   const {user} = useAuth();
   const navigate = useNavigate();
+  const [showToast, setShowToast] = useState(false);
+  const [toastData, setToastData] = useState({});
 
   const totals = useMemo(() => {
     const subtotal = cartItems.reduce(
@@ -22,6 +25,11 @@ export default function Cart() {
   }, [cartItems]);
 
   const handleCheckoutClick = () => {
+    setToastData({
+      message: "Order Placed Successfully!",
+      type: "information",
+    });
+    setShowToast(true);
     navigate("/checkout");
   };
 
@@ -38,7 +46,7 @@ export default function Cart() {
           <div className="bg-white rounded-xl shadow-sm p-10 text-center">
             <p className="text-gray-500 text-sm">Your cart is empty.</p>
             <Link
-              to="/products"
+              to="/"
               className="mt-4 inline-block bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
             >
               Continue Shopping
@@ -112,7 +120,7 @@ export default function Cart() {
                       {/* Price + Remove */}
                       <div className="text-right">
                         <p className="font-bold text-gray-800 text-sm">
-                          ₹{it.price * it.quantity}
+                          ₹{it.price}
                         </p>
                         <button
                           onClick={() => {
@@ -216,6 +224,14 @@ export default function Cart() {
           </div>
         )}
       </div>
+      {showToast && (
+        <Toast
+          message={toastData.message}
+          type={toastData.type}
+          duration={toastData.duration}
+          onclose={() => setShowToast(false)}
+        />
+      )}
     </main>
   );
 }

@@ -54,19 +54,18 @@ const createOrder = asyncHandler(async (req, res, next) => {
     const productIds = productData.products.map(p => p.product_id);
     const products = await Product.find({ product_id: { $in: productIds } }).lean();
     const productMap = new Map(products.map(p => [p.product_id, p]));
-
     // Enrich product data
-    for (const item of productData.products) {
+    const enrichedProducts = productData.products.map((item) => {
         const prod = productMap.get(item.product_id);
-        if (prod) {
-            item.image = prod.image || null;
-            item.product_name = prod.product_name || "";
-            item.product_id = prod.product_id;
-        } else {
-            item.image = null;
-            item.product_name = "";
-        }
-    }
+        return {
+            ...item,
+            product_name: prod?.product_name || "",
+            image: prod?.image || null,
+            product_id: prod?.product_id || item.product_id,
+        };
+    });
+
+    productData.products = enrichedProducts;
 
     const simulatedPaymentId = `PAY_${crypto.randomBytes(8).toString("hex")}`;
 
@@ -151,6 +150,7 @@ const getOrders = asyncHandler(async (req, res, next) => {
         }
     }));
 })
+
 const getOrderById = asyncHandler(async (req, res, next) => {
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) return next(new ApiError(400, "Firebase token is required"));
@@ -163,7 +163,8 @@ const getOrderById = asyncHandler(async (req, res, next) => {
     }
 
     const { id } = req.params;
-    const order = await Order.findOne({ _id: id, firebaseUid: uid }).lean();
+    console.log("id", id);
+    const order = await Order.findOne({ $or: [{ _id: id }, { firebaseUid: uid }] }).lean();
 
     if (!order) {
         return next(new ApiError(404, "Order not found"));

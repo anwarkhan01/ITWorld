@@ -1,4 +1,4 @@
-import {useMemo, useState} from "react";
+import {useMemo, useState, useEffect} from "react";
 import {useParams} from "react-router-dom";
 import {ShoppingCart, CreditCard} from "lucide-react";
 import {useProducts} from "../contexts/ProductsContext.jsx";
@@ -7,7 +7,7 @@ import {useNavigate} from "react-router-dom";
 import {useAuth} from "../contexts/AuthContext.jsx";
 
 export default function ProductDetail() {
-  const {products} = useProducts();
+  const {products, loading, getProductsByIds} = useProducts();
   const {user} = useAuth();
   const {id} = useParams();
   const {addToCart} = useCart();
@@ -18,15 +18,22 @@ export default function ProductDetail() {
   );
   const [activeImg, setActiveImg] = useState(0);
 
-  if (!product)
+  useEffect(() => {
+    if (!product && !loading) {
+      getProductsByIds([id]);
+    }
+  }, [id, product, loading, getProductsByIds]);
+
+  if (loading || !product) {
     return (
       <main className="flex justify-center items-center h-[60vh] text-lg font-semibold">
-        Product not found
+        {loading ? "Loading..." : "Product not found"}
       </main>
     );
+  }
 
-  const handleAddToCart = (productID) => {
-    addToCart(productID);
+  const handleAddToCart = (product) => {
+    addToCart(product);
     navigate("/cart");
   };
   const images = product.images?.length ? product.images : [product.image];
@@ -66,7 +73,7 @@ export default function ProductDetail() {
           <div className="flex flex-col sm:flex-row gap-3 mt-2">
             <button
               className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#f0c14b] px-5 py-3 font-semibold text-black shadow hover:bg-[#e2b23a] transition cursor-pointer"
-              onClick={() => handleAddToCart(product.product_id)}
+              onClick={() => handleAddToCart(product)}
             >
               <ShoppingCart className="h-5 w-5" /> Add to Cart
             </button>

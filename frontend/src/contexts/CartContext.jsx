@@ -1,5 +1,4 @@
 import {createContext, useContext, useEffect, useState, useRef} from "react";
-import {useProducts} from "../contexts/ProductsContext.jsx";
 import {useAuth} from "./AuthContext.jsx";
 
 const CartContext = createContext();
@@ -8,7 +7,6 @@ const STORAGE_KEY = "cart";
 const SYNC_DELAY = 500;
 
 export const CartProvider = ({children}) => {
-  const {products} = useProducts();
   const {mongoUser, user, loading} = useAuth();
 
   const [cartItems, setCartItems] = useState([]);
@@ -18,50 +16,14 @@ export const CartProvider = ({children}) => {
   const prevAuthRef = useRef(null);
   const hasLoggedInRef = useRef(false);
 
-  const hydrateCart = (cart) => {
-    if (!Array.isArray(cart) || !products.length) return [];
-    return cart
-      .map(({id, productId, quantity}) => {
-        const pid = productId || id;
-        const product = products.find((p) => p.product_id === pid);
-        return product ? {...product, quantity} : null;
-      })
-      .filter(Boolean);
-  };
-
-  const mergeCarts = (guest, server) => {
-    const map = new Map();
-
-    for (const item of server) {
-      const pid = item.product_id || item.productId;
-      map.set(pid, {...item});
-    }
-
-    // Add guest items (if not already in server, merge quantities if exists)
-    for (const item of guest) {
-      const pid = item.product_id || item.productId;
-      if (map.has(pid)) {
-        // If item exists in server, add guest quantity to server quantity
-        const existing = map.get(pid);
-        map.set(pid, {
-          ...existing,
-          quantity: existing.quantity + item.quantity,
-        });
-      } else {
-        // If item doesn't exist in server, add it
-        map.set(pid, {...item});
-      }
-    }
-
-    return Array.from(map.values());
-  };
-
+  // --- Compact Cart Format for Syncing ---
   const compactCart = (cart) =>
-    cart.map(({product_id, quantity}) => ({
-      id: product_id,
+    cart.map(({product_id, productId, id, quantity}) => ({
+      id: product_id || productId || id,
       quantity,
     }));
 
+  // --- Fetch Cart from Server ---
   const fetchServerCart = async (firebaseUser) => {
     try {
       const token = await firebaseUser.getIdToken(true);
@@ -76,13 +38,19 @@ export const CartProvider = ({children}) => {
       );
       if (!res.ok) return [];
       const data = await res.json();
-      return Array.isArray(data?.data?.items) ? data.data.items : [];
+      const items = Array.isArray(data?.data?.items)
+        ? data.data.items
+        : Array.isArray(data?.data)
+        ? data.data
+        : [];
+      return items;
     } catch (err) {
       console.error("Error fetching server cart:", err);
       return [];
     }
   };
 
+  // --- Sync Cart to Server ---
   const syncToServer = async (cart, firebaseUser) => {
     try {
       if (!firebaseUser) return false;
@@ -107,9 +75,67 @@ export const CartProvider = ({children}) => {
     }
   };
 
-  // INITIALIZATION
+  // --- Hydrate Cart by Fetching Product Details Directly ---
+  const hydrateCart = async (cart) => {
+    if (!Array.isArray(cart) || cart.length === 0) return [];
+    try {
+      const ids = cart.map((item) => item.productId || item.id);
+      const url = `${
+        import.meta.env.VITE_BACKEND_URL
+      }/api/products/get-products-by-ids`;
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ids}),
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch product details");
+
+      const data = await res.json();
+      const fetchedProducts = Array.isArray(data?.data) ? data.data : [];
+
+      return cart
+        .map(({id, productId, quantity}) => {
+          const pid = productId || id;
+          const product = fetchedProducts.find((p) => p.product_id === pid);
+          return product ? {...product, quantity} : null;
+        })
+        .filter(Boolean);
+    } catch (err) {
+      console.error("Error hydrating cart:", err);
+      return [];
+    }
+  };
+
+  // --- Merge Local + Server Carts ---
+  const mergeCarts = (guest, server) => {
+    const map = new Map();
+
+    for (const item of server) {
+      const pid = item.product_id || item.productId || item.id;
+      map.set(pid, {...item});
+    }
+
+    for (const item of guest) {
+      const pid = item.product_id || item.productId || item.id;
+      if (map.has(pid)) {
+        const existing = map.get(pid);
+        map.set(pid, {
+          ...existing,
+          quantity: existing.quantity + item.quantity,
+        });
+      } else {
+        map.set(pid, {...item});
+      }
+    }
+
+    return Array.from(map.values());
+  };
+
+  // --- Initialize Cart (Independent of Products Context) ---
   useEffect(() => {
-    if (loading || !products.length) return;
+    if (loading) return;
 
     const init = async () => {
       const isLoggedIn = !!(mongoUser && user);
@@ -118,45 +144,30 @@ export const CartProvider = ({children}) => {
 
       try {
         if (isLoggedIn) {
-          // User is logged in
+          // Case: User just logged in (merge guest + server)
           if (!wasLoggedIn && !hasLoggedInRef.current) {
-            // User JUST logged in (transition from guest to logged-in)
-            console.log("User just logged in - merging carts");
-
-            // 1. Fetch server cart
+            console.log("User just logged in — merging carts");
             const serverCart = await fetchServerCart(user);
-            const hydratedServer = hydrateCart(serverCart);
-
-            // 2. Get localStorage cart
             const localCart =
               JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-            const hydratedLocal = hydrateCart(localCart);
 
-            // 3. Merge carts (combine quantities if same item)
-            const merged = mergeCarts(hydratedLocal, hydratedServer);
+            const merged = mergeCarts(localCart, serverCart);
+            const hydrated = await hydrateCart(merged);
 
-            // 4. Update state
-            setCartItems(merged);
-
-            // 5. Sync merged cart to server
-            if (merged.length > 0) {
-              await syncToServer(merged, user);
-            }
-
-            // 6. Clear localStorage
+            setCartItems(hydrated);
+            if (hydrated.length > 0) await syncToServer(hydrated, user);
             localStorage.removeItem(STORAGE_KEY);
-
             hasLoggedInRef.current = true;
           } else {
-            // User was already logged in - fetch from server
-            console.log("User already logged in - fetching from server");
+            // Already logged in — just load from server
             const serverCart = await fetchServerCart(user);
-            const hydratedServer = hydrateCart(serverCart);
-            setCartItems(hydratedServer);
+            const hydrated = await hydrateCart(serverCart);
+            setCartItems(hydrated);
           }
         } else {
+          // Guest user — load from localStorage
           const localCart = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-          const hydrated = hydrateCart(localCart);
+          const hydrated = await hydrateCart(localCart);
           setCartItems(hydrated);
           hasLoggedInRef.current = false;
         }
@@ -168,12 +179,11 @@ export const CartProvider = ({children}) => {
     };
 
     init();
-  }, [loading, products.length, mongoUser, user]);
+  }, [loading, mongoUser, user]);
 
-  // SYNC CHANGES
+  // --- Sync Changes Automatically ---
+  // --- Sync Changes Automatically (Fixed for Guest Cart) ---
   useEffect(() => {
-    if (!isInitialized) return;
-
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
 
     syncTimeoutRef.current = setTimeout(async () => {
@@ -181,17 +191,13 @@ export const CartProvider = ({children}) => {
 
       try {
         if (isLoggedIn) {
-          // User is logged in: sync to MongoDB ONLY
           console.log("Syncing to server (logged in user)");
           await syncToServer(cartItems, user);
-
-          if (localStorage.getItem(STORAGE_KEY)) {
-            localStorage.removeItem(STORAGE_KEY);
-          }
+          localStorage.removeItem(STORAGE_KEY);
         } else {
-          // User is guest: sync to localStorage ONLY
           console.log("Syncing to localStorage (guest user)");
-          if (cartItems.length > 0) {
+          // Always persist guest cart (even first load)
+          if (cartItems && cartItems.length > 0) {
             localStorage.setItem(
               STORAGE_KEY,
               JSON.stringify(compactCart(cartItems))
@@ -206,17 +212,18 @@ export const CartProvider = ({children}) => {
     }, SYNC_DELAY);
 
     return () => clearTimeout(syncTimeoutRef.current);
-  }, [cartItems, mongoUser, user, isInitialized]);
+  }, [cartItems, mongoUser, user]);
 
-  // ACTIONS
-  const addToCart = (productId, qty = 1) => {
-    const product = products.find((p) => p.product_id === productId);
-    if (!product) return;
+  // --- Cart Actions ---
+  const addToCart = (product, qty = 1) => {
+    if (!product || !product.product_id) return;
     setCartItems((prev) => {
-      const existing = prev.find((i) => i.product_id === productId);
+      const existing = prev.find((i) => i.product_id === product.product_id);
       return existing
         ? prev.map((i) =>
-            i.product_id === productId ? {...i, quantity: i.quantity + qty} : i
+            i.product_id === product.product_id
+              ? {...i, quantity: i.quantity + qty}
+              : i
           )
         : [...prev, {...product, quantity: qty}];
     });

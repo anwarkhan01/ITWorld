@@ -1,6 +1,7 @@
 import {useParams, useNavigate} from "react-router-dom";
 import {useOrder} from "../contexts/OrderContext.jsx";
 import {useAuth} from "../contexts/AuthContext.jsx";
+import {useProducts} from "../contexts/ProductsContext.jsx";
 import {ArrowLeft, CheckCircle, XCircle, Truck, Loader2} from "lucide-react";
 import {useState, useEffect} from "react";
 
@@ -8,11 +9,17 @@ const OrderDetail = () => {
   const {id} = useParams();
   const navigate = useNavigate();
   const {getOrderById} = useOrder();
+  const {getProductsByIds} = useProducts();
   const {user} = useAuth();
   const [order, setOrder] = useState(getOrderById(id));
   const [loading, setLoading] = useState(!order);
   const [error, setError] = useState("");
 
+  const handleViewOrderedProduct = async (productId) => {
+    console.log([productId]);
+    getProductsByIds([productId]);
+    navigate(`/product/${productId}`);
+  };
   // Fetch order if not in cache
   useEffect(() => {
     if (!order && id && user) {
@@ -123,6 +130,7 @@ const OrderDetail = () => {
                 <div
                   key={idx}
                   className="flex items-center bg-gray-50 rounded-lg p-3"
+                  onClick={() => handleViewOrderedProduct(p.product_id)}
                 >
                   <img
                     src={p.image || "https://placehold.co/80x80"}
@@ -138,11 +146,11 @@ const OrderDetail = () => {
                       {p.category && `• ${p.category}`}
                     </p>
                     <p className="text-gray-700 text-sm">
-                      Qty {p.quantity} × ₹{p.price}
+                      Qty {p.quantity} × ₹{p.product_price}
                     </p>
                   </div>
                   <p className="font-semibold text-gray-800">
-                    ₹{(p.price * p.quantity).toLocaleString("en-IN")}
+                    ₹{(p.product_price * p.quantity).toLocaleString("en-IN")}
                   </p>
                 </div>
               ))}
@@ -170,7 +178,10 @@ const OrderDetail = () => {
 
             <p>Payment Method: {order.paymentMethod.toUpperCase()}</p>
             <p>Payment ID: {order.paymentId || "N/A"}</p>
-            <p>Order Token: <span className="font-mono text-xs">{order.orderToken}</span></p>
+            <p>
+              Order Token:{" "}
+              <span className="font-mono text-xs">{order.orderToken}</span>
+            </p>
 
             <div className="border-t border-gray-200 my-3"></div>
 

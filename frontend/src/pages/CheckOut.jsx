@@ -7,24 +7,26 @@ import {
   Smartphone,
   Wallet,
   Banknote,
+  Landmark,
   Edit2,
   Check,
   Loader2,
+  Store,
 } from "lucide-react";
+import Toast from "../components/Toast.jsx";
 import {useCart} from "../contexts/CartContext";
 import {useAuth} from "../contexts/AuthContext.jsx";
 import {useProducts} from "../contexts/ProductsContext.jsx";
 import {v4 as uuidv4} from "uuid";
 
 const CheckoutPage = () => {
-  const {
-    cartItems,
-    clearCart /* optional: if you want to clear cart after order */,
-  } = useCart();
+  const {cartItems, clearCart} = useCart();
   const {user, mongoUser} = useAuth();
   const {products} = useProducts();
   const {state} = useLocation();
   const navigate = useNavigate();
+  const [showToast, setShowToast] = useState(false);
+  const [toastData, setToastData] = useState({});
 
   const buyNowItemId = state?.buyNowItemId;
   const buyNowQuantity = state?.buyNowQuantity ?? 1; // if product card sends quantity, backend can pass it via state
@@ -89,10 +91,10 @@ const CheckoutPage = () => {
 
   const paymentMethods = [
     {
-      id: "cod",
-      name: "Cash on Delivery",
-      icon: Banknote,
-      description: "Pay when you receive",
+      id: "sp",
+      name: "Store Pickup ",
+      icon: Store,
+      description: "Pay at the store upon pickup",
     },
     {
       id: "upi",
@@ -107,10 +109,10 @@ const CheckoutPage = () => {
       description: "Visa, Mastercard, Rupay",
     },
     {
-      id: "razorpay",
-      name: "Razorpay",
-      icon: Wallet,
-      description: "All payment options",
+      id: "NetBanking",
+      name: "Net Banking",
+      icon: Landmark,
+      description: "Pay using your bank account",
     },
   ];
 
@@ -218,7 +220,12 @@ const CheckoutPage = () => {
       newErrors.pincode = "Enter a valid 6-digit pincode";
 
     if (!formData.paymentMethod)
-      newErrors.paymentMethod = "Please select a payment method";
+      setToastData({
+        message: "select payment method",
+        type: "warning",
+      });
+    setShowToast(true);
+    newErrors.paymentMethod = "Please select a payment method";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -282,6 +289,7 @@ const CheckoutPage = () => {
     const userId = mongoUser?._id || user?.uid || ""; // prefer mongo user id if available
     const productsList = itemsToCheckout.map((it) => ({
       product_id: it.product_id,
+      product_name: it.product_name,
       quantity: it.quantity ?? 1,
       product_price: it.price,
     }));
@@ -338,6 +346,7 @@ const CheckoutPage = () => {
 
     setIsProcessing(true);
     try {
+      console.log(orderPayload);
       const token = await user.getIdToken();
       const resp = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/api/order/create-order`,
@@ -852,6 +861,14 @@ const CheckoutPage = () => {
           </div>
         </div>
       </div>
+      {showToast && (
+        <Toast
+          message={toastData.message}
+          type={toastData.type}
+          duration={toastData.duration}
+          onclose={() => setShowToast(false)}
+        />
+      )}
     </div>
   );
 };

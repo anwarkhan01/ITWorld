@@ -223,5 +223,73 @@ const getCategorizedProducts = asyncHandler(async (req, res, next) => {
     }));
 });
 
-export { importProducts, getproducts, getRandomProducts, getFilterProducts, getCategorizedProducts }
+const getProductsById = asyncHandler(async (req, res, next) => {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return next(new ApiError(400, "Product IDs are required"));
+    }
+
+    const products = await Product.find({ product_id: { $in: ids } }).lean();
+
+    if (!products.length) {
+        return next(new ApiError(404, "No products found for the given IDs"));
+    }
+
+    return res.json(new ApiResponse(200, "Products fetched successfully", products));
+
+});
+
+const searchProducts = asyncHandler(async (req, res, next) => {
+    const { q } = req.query;
+
+    if (!q || q.trim() === "") {
+        return next(new ApiError(400, "Search query 'q' is required"));
+    }
+
+    // Split query into meaningful words (ignore short/common ones)
+    const terms = q
+        .trim()
+        .split(/\s+/)
+        .filter((word) => word.length > 1);
+
+    if (terms.length === 0) {
+        return next(new ApiError(400, "Search query too vague"));
+    }
+
+    const regexes = terms.map((word) => new RegExp(word, "i"));
+
+    // Build dynamic MongoDB query: all words must match at least one field
+    const query = {
+        $and: regexes.map((r) => ({
+            $or: [
+                { product_name: r },
+                { intro_description: r },
+                { brand: r },
+                { category: r },
+                { sub_category: r },
+                { description: r },
+            ],
+        })),
+    };
+
+    const products = await Product.find(query).lean();
+
+    res.json(
+        new ApiResponse(200, "Search results fetched successfully", {
+            count: products.length,
+            products,
+        })
+    );
+});
+
+export {
+    importProducts,
+    getproducts,
+    getRandomProducts,
+    getFilterProducts,
+    getCategorizedProducts,
+    getProductsById,
+    searchProducts
+}
 

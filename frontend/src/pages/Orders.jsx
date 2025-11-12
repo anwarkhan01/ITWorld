@@ -54,7 +54,7 @@ const Orders = () => {
       </h1>
 
       <div className="space-y-4">
-        {orders.map((order) => {
+        {orders?.map((order) => {
           const first = order.productData.products[0];
           const deliveryDate =
             order.deliveryDate ||
@@ -90,7 +90,7 @@ const Orders = () => {
                   <p className="text-sm text-gray-500">Color: {first.color}</p>
                 )}
                 <p className="text-gray-700 text-sm mt-1">
-                  Price: ₹{first?.price?.toLocaleString("en-IN")}{" "}
+                  Price: ₹{first?.product_price?.toLocaleString("en-IN")}{" "}
                   {order.productData.products.length > 1 && (
                     <span className="text-gray-500 ml-2">
                       + {order.productData.products.length - 1} more item(s)
