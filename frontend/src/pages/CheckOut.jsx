@@ -220,13 +220,13 @@ const CheckoutPage = () => {
       newErrors.pincode = "Enter a valid 6-digit pincode";
 
     if (!formData.paymentMethod)
-      setToastData({
-        message: "select payment method",
-        type: "warning",
-      });
-    setShowToast(true);
-    newErrors.paymentMethod = "Please select a payment method";
+      newErrors.paymentMethod = "Please select a payment method";
 
+    setToastData({
+      message: "please fill in all required fields",
+      type: "failure",
+    });
+    setShowToast(true);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -364,18 +364,38 @@ const CheckoutPage = () => {
       console.log("data", data);
       if (data.success) {
         if (data.data.existing) {
+          setToastData({
+            message: "Order already exists",
+            type: "information",
+          });
+          setShowToast(true);
           console.log("Order already exist");
           navigate(`/orders/${data.data.orderId}`);
           return;
         }
+        setToastData({
+          message: "Order placed successfully!",
+          type: "success",
+        });
+        setShowToast(true);
         console.log(
           `Order placed successfully! Order ID: ${data.data.orderId}`
         );
         navigate(`/orders/${data.data.orderId}`);
       } else {
+        setToastData({
+          message: "Order failed: " + (data.message || "Please try again"),
+          type: "warning",
+        });
+        setShowToast(true);
         console.log(data.message || "Order failed");
       }
     } catch (err) {
+      setToastData({
+        message: "Something went wrong placing your order.",
+        type: "warning",
+      });
+      setShowToast(true);
       console.error(err);
       console.log("Something went wrong placing your order.");
     } finally {
@@ -848,7 +868,7 @@ const CheckoutPage = () => {
               <button
                 type="button"
                 onClick={handlePlaceOrder}
-                disabled={isProcessing}
+                disabled={isProcessing || !user}
                 className="w-full mt-6 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed text-sm sm:text-base"
               >
                 {isProcessing ? "Processing..." : "Place Order"}

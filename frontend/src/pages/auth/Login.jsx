@@ -24,7 +24,13 @@ const Login = () => {
 
       navigate("/");
     } catch (err) {
-      setError(err.message);
+      if (err.code === "auth/popup-closed-by-user") {
+        setError(
+          "Sign in popup was closed before completing the sign in. Please try again."
+        );
+      } else {
+        setError(err.message || "Google sign-in failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -58,6 +64,8 @@ const Login = () => {
       } else {
         setError(err.message || "Login failed. Please try again.");
       }
+
+      console.log("errrooorr", err);
     } finally {
       setLoading(false);
     }

@@ -25,14 +25,17 @@ export default function Cart() {
   }, [cartItems]);
 
   const handleCheckoutClick = () => {
-    setToastData({
-      message: "Order Placed Successfully!",
-      type: "information",
-    });
-    setShowToast(true);
     navigate("/checkout");
   };
 
+  const handleRemoveItem = (productId, name) => {
+    removeFromCart(productId);
+    setToastData({
+      message: `${name} removed from cart`,
+      type: "success",
+    });
+    setShowToast(true);
+  };
   const handlePincodeSuccess = (pincode) => {
     navigate("/checkout", {state: {pincode}});
   };
@@ -69,7 +72,7 @@ export default function Cart() {
                       src={
                         it.image || "https://placehold.co/300x300?text=No+Image"
                       }
-                      alt={it.name}
+                      alt={it.product_name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         e.target.onerror = null;
@@ -85,11 +88,8 @@ export default function Cart() {
                         to={`/product/${it.id}`}
                         className="font-semibold text-gray-800 hover:text-blue-600 transition"
                       >
-                        {it.name}
+                        {it.product_name}
                       </Link>
-                      <p className="text-xs text-blue-500 uppercase tracking-wide mt-1">
-                        {it.category}
-                      </p>
                       {it.intro_description && (
                         <p className="text-sm text-gray-500 mt-1 line-clamp-2">
                           {it.intro_description}
@@ -123,9 +123,9 @@ export default function Cart() {
                           ₹{it.price}
                         </p>
                         <button
-                          onClick={() => {
-                            removeFromCart(it.product_id);
-                          }}
+                          onClick={() =>
+                            handleRemoveItem(it.product_id, it.product_name)
+                          }
                           className="text-xs cursor-pointer text-red-500 hover:text-red-700 mt-1 inline-flex items-center gap-1"
                         >
                           <Trash2 className="h-3.5 w-3.5" />

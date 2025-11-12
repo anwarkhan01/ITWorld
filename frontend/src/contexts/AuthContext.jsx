@@ -80,6 +80,7 @@ export const AuthProvider = ({children}) => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
+      if (!firebaseUser) return;
       const mongoData = await fetchMongoUser(firebaseUser);
       setUser(firebaseUser);
       setMongoUser(mongoData);

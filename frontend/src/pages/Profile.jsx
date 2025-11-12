@@ -12,13 +12,15 @@ import {
   XCircle,
 } from "lucide-react";
 import {useNavigate} from "react-router-dom";
+import Toast from "../components/Toast.jsx";
 
 const Profile = () => {
   const {user, mongoUser, signOutWithGoogle} = useAuth();
   const navigate = useNavigate();
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
-
+  const [showToast, setShowToast] = useState(false);
+  const [toastData, setToastData] = useState({});
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [addressData, setAddressData] = useState({
@@ -113,13 +115,29 @@ const Profile = () => {
       if (data.success) {
         setIsEditingPhone(false);
         setPhoneError("");
-        alert("Phone number updated successfully!");
+        setToastData({
+          message: "Phone number updated successfully!",
+          type: "success",
+        });
+        setShowToast(true);
       } else {
-        alert(data.message || "Failed to update phone number");
+        setIsEditingPhone(false);
+        setPhoneError("");
+        setToastData({
+          message: data.message || "Failed to update phone number",
+          type: "failure",
+        });
+        setShowToast(true);
       }
     } catch (err) {
+      setIsEditingPhone(false);
+      setPhoneError("");
+      setToastData({
+        message: "Error updating phone number",
+        type: "failure",
+      });
+      setShowToast(true);
       console.error("Error updating phone:", err);
-      alert("Error updating phone number");
     } finally {
       setLoading(false);
     }
@@ -132,7 +150,11 @@ const Profile = () => {
       !addressData.state.trim() ||
       !addressData.pincode.trim()
     ) {
-      alert("Please fill in all required fields");
+      setToastData({
+        message: "Please fill in all required fields",
+        type: "success",
+      });
+      setShowToast(true);
       return;
     }
 
@@ -160,13 +182,27 @@ const Profile = () => {
 
       if (data.success) {
         setIsEditingAddress(false);
-        alert("Address updated successfully!");
+        setToastData({
+          message: "Address updated successfully!",
+          type: "success",
+        });
+        setShowToast(true);
       } else {
-        alert(data.message || "Failed to update address");
+        setIsEditingAddress(false);
+        setToastData({
+          message: data.message || "Failed to update address",
+          type: "failure",
+        });
+        setShowToast(true);
       }
     } catch (err) {
+      setIsEditingAddress(false);
+      setToastData({
+        message: data.message || "Error updating address",
+        type: "failure",
+      });
+      setShowToast(true);
       console.error("Error updating address:", err);
-      alert("Error updating address");
     } finally {
       setLoading(false);
     }
@@ -472,6 +508,14 @@ const Profile = () => {
           </div>
         </div>
       </div>
+      {showToast && (
+        <Toast
+          message={toastData.message}
+          type={toastData.type}
+          duration={toastData.duration}
+          onclose={() => setShowToast(false)}
+        />
+      )}
     </div>
   );
 };
