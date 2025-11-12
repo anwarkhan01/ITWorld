@@ -1,18 +1,18 @@
 import admin from "firebase-admin";
 import ApiError from "../utils/ApiError.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
 
-export default async function verifyToken(req, res, next) {
+const verifyIdToken = asyncHandler(async (req, res, next) => {
     const authHeader = req.headers.authorization || "";
     const token = authHeader.split("Bearer ")[1];
     if (!token) {
-        return res.status(401).json(new ApiError(401, "Token Not Found"));
+        return next(new ApiError(401, "Token Not Found"));
     }
-    try {
-        const decoded = await admin.auth().verifyIdToken(token);
-        req.user = { uid: decoded.uid, email: decoded.email, name: decoded.name, picture: decoded.picture };
-        next();
-    } catch (err) {
-        return res.status(401).json(new ApiError(401, "Invalid Token"));
-    }
-}
+    const decoded = await admin.auth().verifyIdToken(token);
+    req.user = { uid: decoded.uid, email: decoded.email, name: decoded.name, picture: decoded.picture };
+    next();
+});
+
+
+export default verifyIdToken;

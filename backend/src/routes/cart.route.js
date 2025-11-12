@@ -1,22 +1,9 @@
 import express from "express";
-import { getAuth } from "firebase-admin/auth";
-import asyncHandler from "../utils/asyncHandler.js";
-import ApiError from "../utils/ApiError.js";
 import { getCart, updateCart } from "../controllers/cart.controller.js";
+import verifyIdToken from "../middlewares/verifyToken.middleware.js";
 const router = express.Router();
 
-const authenticate = asyncHandler(async (req, res, next) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-        return next(new ApiError(400, "Firebase token is required"));
-    }
-    const decoded = await getAuth().verifyIdToken(token);
-    req.userId = decoded.uid;
-
-    next();
-})
-
-router.get("/get-cart", authenticate, getCart);
-router.post("/update-cart", authenticate, updateCart);
+router.get("/get-cart", verifyIdToken, getCart);
+router.post("/update-cart", verifyIdToken, updateCart);
 
 export default router;

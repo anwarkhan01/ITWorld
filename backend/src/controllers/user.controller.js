@@ -2,16 +2,9 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import User from "../models/user.model.js";
-import admin from "../config/firebase.js";
-
 
 const googleAuthController = asyncHandler(async (req, res, next) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return next(new ApiError(400, "Firebase token is required"));
-
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const { uid, email, name, picture } = decodedToken;
-
+    const { uid, email, name, picture } = req.user
     let user = await User.findOne({
         $or: [{ firebaseUid: uid }, { email }],
     });
@@ -45,12 +38,7 @@ const googleAuthController = asyncHandler(async (req, res, next) => {
 });
 
 const updatePhone = asyncHandler(async (req, res, next) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return next(new ApiError(400, "Firebase token is required"));
-
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const uid = decodedToken.uid;
-
+    const uid = req.user.uid;
     const { phone } = req.body;
     if (!phone) return next(new ApiError(400, "Phone number is required"));
 
@@ -71,12 +59,7 @@ const updatePhone = asyncHandler(async (req, res, next) => {
 });
 
 const updateAddress = asyncHandler(async (req, res, next) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return next(new ApiError(400, "Firebase token is required"));
-
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const uid = decodedToken.uid;
-
+    const uid = req.user.uid;
     const { address } = req.body;
     if (!address) return next(new ApiError(400, "Address object is required"));
 
@@ -115,12 +98,7 @@ const updateAddress = asyncHandler(async (req, res, next) => {
 });
 
 const emailSync = asyncHandler(async (req, res, next) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return next(new ApiError(400, "Firebase token is required"));
-
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const { uid, email: decodedEmail } = decodedToken;
-
+    const { uid, email: decodedEmail } = req.user;
     const { uid: bodyUid, email, name, emailVerified } = req.body;
 
     const userEmail = email || decodedEmail;

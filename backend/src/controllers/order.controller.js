@@ -8,12 +8,8 @@ import crypto from "crypto"
 import ApiError from "../utils/ApiError.js";
 
 const createOrder = asyncHandler(async (req, res, next) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return next(new ApiError(400, "Firebase token is required"));
 
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const { uid, email } = decodedToken;
-
+    const { uid, email } = req.user;
     const user = await User.findOne({
         $or: [{ firebaseUid: uid }, { email }],
     });
@@ -90,33 +86,8 @@ const createOrder = asyncHandler(async (req, res, next) => {
     );
 });
 
-// export const getUserOrders = async (req, res) => {
-//     try {
-//         const user = req.user;
-//         if (!user) return res.status(401).json({ success: false, message: "Unauthorized" });
-
-//         const orders = await Order.find({ userid: user.mongoId || user.uid })
-//             .sort({ createdAt: -1 })
-//             .lean();
-
-//         res.status(200).json({ success: true, orders });
-//     } catch (err) {
-//         console.error("Error fetching orders:", err);
-//         res.status(500).json({ success: false, message: "Server error" });
-//     }
-// };
-
 const getOrders = asyncHandler(async (req, res, next) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return next(new ApiError(400, "Firebase token is required"));
-
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const { uid } = decodedToken;
-
-    if (!uid) {
-        return next(new ApiError(401, "Unauthorized"));
-    }
-
+    const uid = req.user.uid;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -152,16 +123,8 @@ const getOrders = asyncHandler(async (req, res, next) => {
 })
 
 const getOrderById = asyncHandler(async (req, res, next) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return next(new ApiError(400, "Firebase token is required"));
 
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const { uid } = decodedToken;
-
-    if (!uid) {
-        return next(new ApiError(401, "Unauthorized"));
-    }
-
+    const uid = req.user.uid;
     const { id } = req.params;
     console.log("id", id);
     const order = await Order.findOne({ $or: [{ _id: id }, { firebaseUid: uid }] }).lean();

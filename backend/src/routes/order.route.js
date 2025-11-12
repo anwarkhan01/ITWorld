@@ -1,8 +1,10 @@
 import express from "express";
 import { createOrder, getOrders, getOrderById } from "../controllers/order.controller.js";
+import verifyIdToken from "../middlewares/verifyToken.middleware.js";
 
 const router = express.Router();
-router.post("/create-order", createOrder);
-router.get("/get-orders", getOrders);
-router.get("/get-order/:id", getOrderById);
+
+router.post("/create-order", verifyIdToken, createOrder);
+router.get("/get-orders", verifyIdToken, getOrders);
+router.get("/get-order/:id", verifyIdToken, getOrderById);
 export default router;
