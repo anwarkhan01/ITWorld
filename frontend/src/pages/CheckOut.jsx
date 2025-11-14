@@ -109,6 +109,12 @@ const CheckoutPage = () => {
       description: "Visa, Mastercard, Rupay",
     },
     {
+      id: "payu",
+      name: "payu",
+      icon: Wallet,
+      description: "UPi, BHIM UPi",
+    },
+    {
       id: "NetBanking",
       name: "Net Banking",
       icon: Landmark,
@@ -221,12 +227,6 @@ const CheckoutPage = () => {
 
     if (!formData.paymentMethod)
       newErrors.paymentMethod = "Please select a payment method";
-
-    setToastData({
-      message: "please fill in all required fields",
-      type: "failure",
-    });
-    setShowToast(true);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -332,6 +332,49 @@ const CheckoutPage = () => {
   // Place order: validates, builds payload, (optionally) sends to backend and handles response.
   const handlePlaceOrder = async () => {
     if (!validateForm()) return;
+
+    if (formData.paymentMethod === "payu") {
+      const payload = {
+        productData: {
+          totalPrice: total,
+          products: itemsToCheckout.map((i) => ({
+            product_id: i.product_id,
+            product_name: i.product_name,
+            quantity: i.quantity,
+            product_price: i.price,
+          })),
+        },
+        shipping: formData,
+        user: {
+          firebaseUid: user.uid,
+          email: mongoUser.email,
+        },
+      };
+
+      const token = await user.getIdToken();
+
+      const resp = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/payment/start`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+      // const data = await resp.json();
+      // console.log(data);
+      const payuHtml = await resp.text();
+      document.write(payuHtml);
+      // const newWindow = window.open("", "_self");
+
+      // newWindow.document.body.innerHTML = payuHtml;
+      // newWindow.document.close();
+      document.close();
+      return;
+    }
 
     let orderToken = sessionStorage.getItem("orderToken");
     if (!orderToken) {
@@ -733,45 +776,184 @@ const CheckoutPage = () => {
 
             {/* Payment Method */}
             <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-6">
                 Payment Method
               </h2>
 
-              <div className="space-y-3">
-                {paymentMethods.map((method) => {
-                  const Icon = method.icon;
-                  return (
-                    <label
-                      key={method.id}
-                      className={`flex items-center p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        formData.paymentMethod === method.id
-                          ? "border-blue-600 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300"
+              <div className="space-y-4">
+                {/* Store Pickup */}
+                <div
+                  onClick={() =>
+                    handleInputChange({
+                      target: {name: "paymentMethod", value: "sp"},
+                    })
+                  }
+                  className={`relative border-2 rounded-xl p-5 cursor-pointer transition-all duration-200 ${
+                    formData.paymentMethod === "sp"
+                      ? "border-blue-500 bg-blue-50 shadow-md"
+                      : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={`shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${
+                        formData.paymentMethod === "sp"
+                          ? "bg-blue-100"
+                          : "bg-gray-100"
                       }`}
                     >
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value={method.id}
-                        checked={formData.paymentMethod === method.id}
-                        onChange={handleInputChange}
-                        className="w-4 h-4 text-blue-600"
+                      <Store
+                        className={`w-6 h-6 ${
+                          formData.paymentMethod === "sp"
+                            ? "text-blue-600"
+                            : "text-gray-600"
+                        }`}
                       />
-                      <Icon className="w-5 h-5 sm:w-6 sm:h-6 ml-3 text-gray-600" />
-                      <div className="ml-3 flex-1">
-                        <p className="font-medium text-gray-900 text-sm sm:text-base">
-                          {method.name}
-                        </p>
-                        <p className="text-xs sm:text-sm text-gray-500">
-                          {method.description}
-                        </p>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h3
+                        className={`text-lg font-semibold ${
+                          formData.paymentMethod === "sp"
+                            ? "text-blue-900"
+                            : "text-gray-900"
+                        }`}
+                      >
+                        Store Pickup
+                      </h3>
+                      <p
+                        className={`text-sm mt-1 ${
+                          formData.paymentMethod === "sp"
+                            ? "text-blue-700"
+                            : "text-gray-600"
+                        }`}
+                      >
+                        Pay at the store upon pickup
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Online Payment */}
+                <div
+                  onClick={() =>
+                    handleInputChange({
+                      target: {name: "paymentMethod", value: "payu"},
+                    })
+                  }
+                  className={`relative border-2 rounded-xl p-5 cursor-pointer transition-all duration-200 ${
+                    formData.paymentMethod === "payu"
+                      ? "border-blue-500 bg-blue-50 shadow-md"
+                      : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={`shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${
+                        formData.paymentMethod === "payu"
+                          ? "bg-blue-100"
+                          : "bg-gray-100"
+                      }`}
+                    >
+                      <CreditCard
+                        className={`w-6 h-6 ${
+                          formData.paymentMethod === "payu"
+                            ? "text-blue-600"
+                            : "text-gray-600"
+                        }`}
+                      />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h3
+                        className={`text-lg font-semibold ${
+                          formData.paymentMethod === "payu"
+                            ? "text-blue-900"
+                            : "text-gray-900"
+                        }`}
+                      >
+                        Online Payment
+                      </h3>
+                      <p
+                        className={`text-sm mt-1 ${
+                          formData.paymentMethod === "payu"
+                            ? "text-blue-700"
+                            : "text-gray-600"
+                        }`}
+                      >
+                        UPI, Cards, Net Banking & More
+                      </p>
+
+                      <div className="flex-wrap gap-2 mt-3 md:flex hidden">
+                        {[
+                          "Google Pay",
+                          "PhonePe",
+                          "Paytm",
+                          "Cards",
+                          "Net Banking",
+                        ].map((provider) => (
+                          <span
+                            key={provider}
+                            className={`text-xs px-3 py-1 rounded-full ${
+                              formData.paymentMethod === "payu"
+                                ? "bg-blue-100 text-blue-700 border border-blue-200"
+                                : "bg-gray-100 text-gray-600 border border-gray-200"
+                            }`}
+                          >
+                            {provider}
+                          </span>
+                        ))}
                       </div>
-                    </label>
-                  );
-                })}
+                    </div>
+                  </div>
+
+                  {/* {formData.paymentMethod === "payu" && (
+                    <div className="absolute top-4 right-4">
+                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                        <svg
+                          className="w-4 h-4 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  )} */}
+                </div>
+
+                {/* Cash on Delivery (Disabled) */}
+                <div className="relative border-2 rounded-xl p-5 transition-all duration-200 border-gray-200 bg-gray-50 cursor-not-allowed opacity-60">
+                  <div className="flex items-start gap-4">
+                    <div className="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center bg-gray-200">
+                      <Banknote className="w-6 h-6 text-gray-400" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold text-gray-500">
+                          Cash on Delivery
+                        </h3>
+                        <span className="text-xs font-medium text-gray-500 bg-gray-200 px-2 py-1 rounded-full md:block hidden">
+                          Unavailable
+                        </span>
+                      </div>
+                      <p className="text-sm mt-1 text-gray-400">
+                        Currently unavailable
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
+
               {errors.paymentMethod && (
-                <p className="mt-2 text-xs sm:text-sm text-red-500">
+                <p className="mt-4 text-xs sm:text-sm text-red-500">
                   {errors.paymentMethod}
                 </p>
               )}
@@ -844,14 +1026,14 @@ const CheckoutPage = () => {
                         : "text-gray-900"
                     }
                   >
-                    {deliveryCharge === 0 ? "FREE" : `₹${deliveryCharge}`}
+                    {deliveryCharge === 0 ? 0 : `₹${deliveryCharge}`}
                   </span>
                 </div>
-                {deliveryCharge === 0 && (
+                {/* {deliveryCharge === 0 && (
                   <p className="text-xs text-green-600">
                     Free delivery on orders above ₹50,000
                   </p>
-                )}
+                )} */}
               </div>
 
               <div className="border-t mt-4 pt-4">

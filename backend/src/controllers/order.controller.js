@@ -32,7 +32,7 @@ const createOrder = asyncHandler(async (req, res, next) => {
     }
 
     // Validate payment method
-    const validPaymentMethods = ["cod", "upi", "card", "razorpay"];
+    const validPaymentMethods = ["cod", "upi", "card", "payu", "razorpay"];
     if (!validPaymentMethods.includes(paymentMethod)) {
         return next(new ApiError(400, "Invalid payment method"));
     }
@@ -78,6 +78,14 @@ const createOrder = asyncHandler(async (req, res, next) => {
 
     await order.save();
 
+    if (paymentMethod === "payu") {
+        return res.json(
+            new ApiResponse(200, "Order created, redirect to PayU", {
+                orderId: order._id,
+                txnid: order.orderToken, // txnid is your orderToken
+            })
+        );
+    }
     return res.json(
         new ApiResponse(200, "Order placed successfully", {
             orderId: order._id,
@@ -126,7 +134,6 @@ const getOrderById = asyncHandler(async (req, res, next) => {
 
     const uid = req.user.uid;
     const { id } = req.params;
-    console.log("id", id);
     const order = await Order.findOne({ $or: [{ _id: id }, { firebaseUid: uid }] }).lean();
 
     if (!order) {

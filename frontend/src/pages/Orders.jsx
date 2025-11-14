@@ -5,8 +5,8 @@ import {Loader2, CheckCircle, Truck, XCircle} from "lucide-react";
 
 const Orders = () => {
   const navigate = useNavigate();
-  const {orders, loading, error} = useOrder();
-  if (loading)
+  const {orders, orderLoading, error} = useOrder();
+  if (orderLoading)
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loader2 className="w-6 h-6 text-blue-600 animate-spin mr-2" />

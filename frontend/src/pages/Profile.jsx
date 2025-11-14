@@ -10,9 +10,12 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
+  Package,
+  ChevronRight,
 } from "lucide-react";
 import {useNavigate} from "react-router-dom";
 import Toast from "../components/Toast.jsx";
+import {useOrder} from "../contexts/OrderContext.jsx";
 
 const Profile = () => {
   const {user, mongoUser, signOutWithGoogle} = useAuth();
@@ -23,6 +26,7 @@ const Profile = () => {
   const [toastData, setToastData] = useState({});
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const {orders, orderLoading, error: orderError} = useOrder();
   const [addressData, setAddressData] = useState({
     fullAddress: "",
     landmark: "",
@@ -247,7 +251,6 @@ const Profile = () => {
             </button>
           </div>
         </div>
-
         {/* Contact Information Card */}
         <div className="bg-white rounded-xl shadow border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
@@ -506,6 +509,98 @@ const Profile = () => {
               </div>
             )}
           </div>
+        </div>
+        {/* Order */}
+        <div className="bg-white rounded-xl shadow border border-gray-200 p-4 sm:p-6 mt-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            Recent Orders
+          </h2>
+
+          {orderLoading ? (
+            <div className="flex items-center text-gray-500 text-sm">
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading
+              orders...
+            </div>
+          ) : orderError ? (
+            <p className="text-sm text-red-600">{orderError}</p>
+          ) : !orders?.length ? (
+            <div className="flex flex-col items-center justify-center text-center py-4">
+              <p className="text-sm text-gray-500 mb-2">No orders yet.</p>
+              <button
+                onClick={() => navigate("/orders")}
+                className="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+              >
+                View Orders
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="divide-y divide-gray-100">
+                {orders.slice(0, 2).map((order) => {
+                  const first = order.productData.products[0];
+                  const date = new Date(order.createdAt).toLocaleDateString(
+                    "en-IN",
+                    {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    }
+                  );
+
+                  return (
+                    <div
+                      key={order._id}
+                      onClick={() => navigate(`/orders/${order._id}`)}
+                      className="flex justify-between items-center py-3 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors px-2"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-gray-800 truncate">
+                          {first?.product_name || "Product"}
+                          {order.productData.products.length > 1 && (
+                            <span className="text-gray-500 text-xs ml-1">
+                              + {order.productData.products.length - 1} more
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Ordered on {date}
+                        </p>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-gray-800">
+                          ₹
+                          {order.productData.totalPrice.toLocaleString("en-IN")}
+                        </p>
+                        <p
+                          className={`text-xs ${
+                            order.status === "Delivered"
+                              ? "text-green-600"
+                              : order.status === "Cancelled"
+                              ? "text-red-600"
+                              : "text-yellow-600"
+                          }`}
+                        >
+                          {order.status}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-center sm:justify-end mt-4">
+                <button
+                  onClick={() => navigate("/orders")}
+                  className="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+                >
+                  View All Orders
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
       {showToast && (

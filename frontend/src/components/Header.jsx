@@ -130,6 +130,7 @@ const Navbar = () => {
   const [openMobileCategory, setOpenMobileCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const {cartItems} = useCart();
   const {user} = useAuth();
   const navigate = useNavigate();
@@ -150,6 +151,23 @@ const Navbar = () => {
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      if (currentScrollY > 50) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, {passive: true});
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
@@ -368,7 +386,13 @@ const Navbar = () => {
       </div>
 
       {/* Desktop Categories */}
-      <div className="bg-gray-800 border-t border-gray-700 hidden md:block relative">
+      <div
+        className={`bg-gray-800 border-t border-gray-700 hidden md:block relative transition-all duration-300 ${
+          isScrolled
+            ? "max-h-0 opacity-0 overflow-hidden"
+            : "max-h-20 opacity-100"
+        }`}
+      >
         <div className="max-w-5xl mx-auto px-6 py-2">
           <div className="flex items-center justify-around overflow-x-auto scrollbar-hide">
             {categories.map((category) => {

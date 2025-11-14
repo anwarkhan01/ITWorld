@@ -12,6 +12,8 @@ import CheckoutPage from "./pages/CheckOut.jsx";
 import {useAuth} from "./contexts/AuthContext.jsx";
 import Orders from "./pages/Orders.jsx";
 import OrderDetail from "./pages/OrderDetail.jsx";
+import PaymentSuccess from "./pages/payment/PaymentSuccess.jsx";
+import PaymentFailed from "./pages/payment/PaymentFailed.jsx";
 
 const ProtectedRoute = ({children}) => {
   const {user, loading} = useAuth();
@@ -61,6 +63,11 @@ const App = () => {
         <Route path="checkout" element={<CheckoutPage />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/orders/:id" element={<OrderDetail />} />
+        <Route
+          path="/payment/payment-successful"
+          element={<PaymentSuccess />}
+        />
+        <Route path="/payment/payment-failed" element={<PaymentFailed />} />
         {/* Protected Profile Route */}
         <Route
           path="profile"

@@ -44,6 +44,7 @@ const metaSchema = new mongoose.Schema(
     { _id: false }
 );
 
+// * TODO: Generate Order
 const orderSchema = new mongoose.Schema(
     {
         firebaseUid: { type: String, required: true, index: true }, // NOT unique - users can have multiple orders
@@ -52,7 +53,7 @@ const orderSchema = new mongoose.Schema(
         shipping: { type: shippingSchema, required: true },
         paymentMethod: {
             type: String,
-            enum: ["cod", "upi", "card", "razorpay"],
+            enum: ["cod", "upi", "card", "payu", "razorpay"],
             required: true,
         },
         orderToken: { type: String, required: true, unique: true }, // idempotency key - unique to prevent duplicate orders

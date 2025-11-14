@@ -145,7 +145,7 @@ export default function Cart() {
                   Clear Cart
                 </button>
                 <Link
-                  to="/products"
+                  to="/"
                   className="rounded-md bg-white px-3 py-2 text-sm shadow-sm hover:shadow-md border border-gray-200"
                 >
                   Continue Shopping

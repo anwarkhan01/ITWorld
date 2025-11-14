@@ -97,12 +97,12 @@ const OrderDetail = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-8 lg:px-16">
-      <button
+      {/* <button
         onClick={() => navigate("/orders")}
         className="flex items-center text-sm text-blue-600 hover:text-blue-700 mb-6"
       >
         <ArrowLeft className="w-4 h-4 mr-1" /> Back to Orders
-      </button>
+      </button> */}
 
       <div className="bg-white shadow border border-gray-100 rounded-lg p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">

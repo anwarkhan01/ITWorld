@@ -6,7 +6,7 @@ const OrderContext = createContext();
 export const OrderProvider = ({children}) => {
   const {user} = useAuth();
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [orderLoading, setOrderLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -15,7 +15,7 @@ export const OrderProvider = ({children}) => {
         setOrders([]);
         return;
       }
-      setLoading(true);
+      setOrderLoading(true);
       setError("");
       try {
         const token = await user.getIdToken();
@@ -36,7 +36,7 @@ export const OrderProvider = ({children}) => {
         setError("Unable to load orders");
         setOrders([]);
       } finally {
-        setLoading(false);
+        setOrderLoading(false);
       }
     };
 
@@ -46,7 +46,7 @@ export const OrderProvider = ({children}) => {
   const getOrderById = (id) => orders.find((o) => o._id === id);
 
   return (
-    <OrderContext.Provider value={{orders, loading, error, getOrderById}}>
+    <OrderContext.Provider value={{orders, orderLoading, error, getOrderById}}>
       {children}
     </OrderContext.Provider>
   );

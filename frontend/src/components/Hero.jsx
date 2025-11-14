@@ -33,7 +33,7 @@ const Hero = () => {
   }, [current]);
 
   return (
-    <div className="relative w-full md:h-[calc(100vh-112.8px)] h-[calc(100vh-64px)] overflow-hidden">
+    <div className="relative w-full min-h-[calc(100dvh-64px)] md:min-h-[calc(100dvh-112.8px)] overflow-hidden">
       {heroImages.map((img, index) => (
         <div
           key={index}

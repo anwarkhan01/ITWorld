@@ -8,6 +8,7 @@ import orderRouter from "./routes/order.route.js";
 import helmet from "helmet";
 import cartRouter from "./routes/cart.route.js";
 import ApiError from "./utils/ApiError.js";
+import paymentRouter from "./routes/payment.route.js";
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use("/api/cart", cartRouter);
 app.use("/api/products", productRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/order", orderRouter);
+app.use("/api/payment", paymentRouter);
 app.use("/", (req, res, next) => {
     next(
         new ApiError(
