@@ -1,7 +1,7 @@
 import {useMemo, useState, useEffect} from "react";
 import {Frown, SlidersHorizontal, X, ArrowUpDown} from "lucide-react";
 import ProductCardAction from "../components/ProductCardAction.jsx";
-import SidebarFilter from "../components/SidebarFilter.jsx";
+import SidebarFilter from "../components/SideBarFilter.jsx";
 import {useCart} from "../contexts/CartContext.jsx";
 import {useProducts} from "../contexts/ProductsContext.jsx";
 import {useNavigate, useSearchParams} from "react-router-dom";
