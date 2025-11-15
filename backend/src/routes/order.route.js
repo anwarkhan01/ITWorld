@@ -6,5 +6,5 @@ const router = express.Router();
 
 router.post("/create-order", verifyIdToken, createOrder);
 router.get("/get-orders", verifyIdToken, getOrders);
-router.get("/get-order/:id", verifyIdToken, getOrderById);
+router.get("/get-order/:orderId", verifyIdToken, getOrderById);
 export default router;

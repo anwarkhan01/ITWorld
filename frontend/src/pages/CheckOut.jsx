@@ -18,16 +18,17 @@ import {useCart} from "../contexts/CartContext";
 import {useAuth} from "../contexts/AuthContext.jsx";
 import {useProducts} from "../contexts/ProductsContext.jsx";
 import {v4 as uuidv4} from "uuid";
+import {useOrder} from "../contexts/OrderContext.jsx";
 
 const CheckoutPage = () => {
   const {cartItems, clearCart} = useCart();
   const {user, mongoUser} = useAuth();
+  const {initiatePayment, createOrder, isOrderProcessing} = useOrder();
   const {products} = useProducts();
   const {state} = useLocation();
   const navigate = useNavigate();
   const [showToast, setShowToast] = useState(false);
   const [toastData, setToastData] = useState({});
-
   const buyNowItemId = state?.buyNowItemId;
   const buyNowQuantity = state?.buyNowQuantity ?? 1; // if product card sends quantity, backend can pass it via state
 
@@ -88,39 +89,6 @@ const CheckoutPage = () => {
   const tax = Math.round(subtotal * 0.18);
   const deliveryCharge = subtotal > 50000 ? 0 : 500;
   const total = subtotal + tax + deliveryCharge;
-
-  const paymentMethods = [
-    {
-      id: "sp",
-      name: "Store Pickup ",
-      icon: Store,
-      description: "Pay at the store upon pickup",
-    },
-    {
-      id: "upi",
-      name: "UPI",
-      icon: Smartphone,
-      description: "Google Pay, PhonePe, Paytm",
-    },
-    {
-      id: "card",
-      name: "Credit/Debit Card",
-      icon: CreditCard,
-      description: "Visa, Mastercard, Rupay",
-    },
-    {
-      id: "payu",
-      name: "payu",
-      icon: Wallet,
-      description: "UPi, BHIM UPi",
-    },
-    {
-      id: "NetBanking",
-      name: "Net Banking",
-      icon: Landmark,
-      description: "Pay using your bank account",
-    },
-  ];
 
   const validatePhone = (phoneNumber) => {
     const digitsOnly = (phoneNumber || "").replace(/\D/g, "");
@@ -305,8 +273,6 @@ const CheckoutPage = () => {
     const totalPrice = subtotal + tax + deliveryCharge;
 
     return {
-      userid: userId,
-      useremail: mongoUser.email,
       productData: {
         totalPrice,
         products: productsList,
@@ -329,123 +295,51 @@ const CheckoutPage = () => {
     };
   };
 
-  // Place order: validates, builds payload, (optionally) sends to backend and handles response.
   const handlePlaceOrder = async () => {
     if (!validateForm()) return;
 
-    if (formData.paymentMethod === "payu") {
-      const payload = {
-        productData: {
-          totalPrice: total,
-          products: itemsToCheckout.map((i) => ({
-            product_id: i.product_id,
-            product_name: i.product_name,
-            quantity: i.quantity,
-            product_price: i.price,
-          })),
-        },
-        shipping: formData,
-        user: {
-          firebaseUid: user.uid,
-          email: mongoUser.email,
-        },
-      };
+    const payload = buildOrderPayload();
+    if (formData.paymentMethod === "online") {
+      const result = await initiatePayment(payload);
 
-      const token = await user.getIdToken();
-
-      const resp = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/payment/start`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-      // const data = await resp.json();
-      // console.log(data);
-      const payuHtml = await resp.text();
-      document.write(payuHtml);
-      // const newWindow = window.open("", "_self");
-
-      // newWindow.document.body.innerHTML = payuHtml;
-      // newWindow.document.close();
-      document.close();
+      if (!result.success) {
+        setToastData({
+          message: result.message || "Failed to initiate payment",
+          type: "error",
+        });
+        setShowToast(true);
+      }
       return;
     }
 
-    let orderToken = sessionStorage.getItem("orderToken");
-    if (!orderToken) {
-      orderToken = uuidv4();
-      sessionStorage.setItem("orderToken", orderToken);
-    }
-
-    const orderPayload = {
-      ...buildOrderPayload(),
-      orderToken,
-    };
-
-    setIsProcessing(true);
     try {
-      console.log(orderPayload);
-      const token = await user.getIdToken();
-      const resp = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/order/create-order`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(orderPayload),
-        }
-      );
+      const result = await createOrder(payload);
 
-      const data = await resp.json();
-      console.log("data", data);
-      if (data.success) {
-        if (data.data.existing) {
-          setToastData({
-            message: "Order already exists",
-            type: "information",
-          });
-          setShowToast(true);
-          console.log("Order already exist");
-          navigate(`/orders/${data.data.orderId}`);
-          return;
-        }
+      if (result.success) {
         setToastData({
           message: "Order placed successfully!",
           type: "success",
         });
         setShowToast(true);
-        console.log(
-          `Order placed successfully! Order ID: ${data.data.orderId}`
-        );
-        navigate(`/orders/${data.data.orderId}`);
+
+        // Navigate to order details page
+        navigate(`/orders/${result.data.orderId}`);
       } else {
         setToastData({
-          message: "Order failed: " + (data.message || "Please try again"),
-          type: "warning",
+          message: result.message || "Failed to place order",
+          type: "error",
         });
         setShowToast(true);
-        console.log(data.message || "Order failed");
       }
-    } catch (err) {
+    } catch (error) {
       setToastData({
         message: "Something went wrong placing your order.",
-        type: "warning",
+        type: "error",
       });
       setShowToast(true);
-      console.error(err);
-      console.log("Something went wrong placing your order.");
-    } finally {
-      setIsProcessing(false);
+      console.error(error);
     }
   };
-
   if (itemsToCheckout.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -838,11 +732,11 @@ const CheckoutPage = () => {
                 <div
                   onClick={() =>
                     handleInputChange({
-                      target: {name: "paymentMethod", value: "payu"},
+                      target: {name: "paymentMethod", value: "online"},
                     })
                   }
                   className={`relative border-2 rounded-xl p-5 cursor-pointer transition-all duration-200 ${
-                    formData.paymentMethod === "payu"
+                    formData.paymentMethod === "online"
                       ? "border-blue-500 bg-blue-50 shadow-md"
                       : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
                   }`}
@@ -850,14 +744,14 @@ const CheckoutPage = () => {
                   <div className="flex items-start gap-4">
                     <div
                       className={`shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${
-                        formData.paymentMethod === "payu"
+                        formData.paymentMethod === "online"
                           ? "bg-blue-100"
                           : "bg-gray-100"
                       }`}
                     >
                       <CreditCard
                         className={`w-6 h-6 ${
-                          formData.paymentMethod === "payu"
+                          formData.paymentMethod === "online"
                             ? "text-blue-600"
                             : "text-gray-600"
                         }`}
@@ -867,7 +761,7 @@ const CheckoutPage = () => {
                     <div className="flex-1 min-w-0">
                       <h3
                         className={`text-lg font-semibold ${
-                          formData.paymentMethod === "payu"
+                          formData.paymentMethod === "online"
                             ? "text-blue-900"
                             : "text-gray-900"
                         }`}
@@ -876,7 +770,7 @@ const CheckoutPage = () => {
                       </h3>
                       <p
                         className={`text-sm mt-1 ${
-                          formData.paymentMethod === "payu"
+                          formData.paymentMethod === "online"
                             ? "text-blue-700"
                             : "text-gray-600"
                         }`}
@@ -895,7 +789,7 @@ const CheckoutPage = () => {
                           <span
                             key={provider}
                             className={`text-xs px-3 py-1 rounded-full ${
-                              formData.paymentMethod === "payu"
+                              formData.paymentMethod === "online"
                                 ? "bg-blue-100 text-blue-700 border border-blue-200"
                                 : "bg-gray-100 text-gray-600 border border-gray-200"
                             }`}
@@ -906,26 +800,6 @@ const CheckoutPage = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* {formData.paymentMethod === "payu" && (
-                    <div className="absolute top-4 right-4">
-                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-4 h-4 text-white"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      </div>
-                    </div>
-                  )} */}
                 </div>
 
                 {/* Cash on Delivery (Disabled) */}

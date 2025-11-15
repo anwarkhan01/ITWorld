@@ -1,4 +1,4 @@
-import admin from "firebase-admin";
+import admin from "../config/firebase.js";
 import ApiError from "../utils/ApiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
 

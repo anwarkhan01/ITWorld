@@ -1,56 +1,69 @@
 import Order from "../models/order.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import User from "../models/user.model.js"
+import User from "../models/user.model.js";
 import Product from "../models/product.model.js";
 import ApiResponse from "../utils/ApiResponse.js";
-import admin from "../config/firebase.js";
-import crypto from "crypto"
+import crypto from "crypto";
 import ApiError from "../utils/ApiError.js";
 
 const createOrder = asyncHandler(async (req, res, next) => {
-
     const { uid, email } = req.user;
+    console.log("Create order request received");
+
+    // Generate unique orderId
+    const orderId = [...crypto.getRandomValues(new Uint8Array(12))]
+        .map((b) => b.toString(36).padStart(2, "0"))
+        .join("")
+        .slice(0, 20)
+        .toUpperCase();
+
     const user = await User.findOne({
         $or: [{ firebaseUid: uid }, { email }],
     });
+
     if (!user) return next(new ApiError(401, "Unauthorized"));
 
-    const { productData, shipping, paymentMethod, meta, orderToken } = req.body;
+    const { productData, shipping, paymentMethod, meta } = req.body;
 
+    // Validation
     if (!productData || !shipping || !paymentMethod) {
-        return next(new ApiError(400, "Missing required fields: productData, shipping, and paymentMethod are required"));
+        return next(
+            new ApiError(
+                400,
+                "Missing required fields: productData, shipping, and paymentMethod are required"
+            )
+        );
     }
 
-    // Validate productData
-    if (!productData.products || !Array.isArray(productData.products) || productData.products.length === 0) {
+    if (
+        !productData.products ||
+        !Array.isArray(productData.products) ||
+        productData.products.length === 0
+    ) {
         return next(new ApiError(400, "Product data must contain at least one product"));
     }
 
-    // Validate shipping address
-    if (!shipping.name || !shipping.phone || !shipping.address || !shipping.city || !shipping.state || !shipping.pincode) {
+    if (
+        !shipping.name ||
+        !shipping.phone ||
+        !shipping.address ||
+        !shipping.city ||
+        !shipping.state ||
+        !shipping.pincode
+    ) {
         return next(new ApiError(400, "Incomplete shipping address"));
     }
 
-    // Validate payment method
-    const validPaymentMethods = ["cod", "upi", "card", "payu", "razorpay"];
+    const validPaymentMethods = ["sp", "cod", "upi", "card", "payu", "online"];
     if (!validPaymentMethods.includes(paymentMethod)) {
         return next(new ApiError(400, "Invalid payment method"));
     }
 
-    // prevent duplicate order
-    const existing = await Order.findOne({ orderToken });
-    if (existing)
-        return res.json(
-            new ApiResponse(200, "Duplicate request ignored - existing order found", {
-                orderId: existing._id,
-                existing: true,
-            })
-        );
-    // Fix N+1 query problem by fetching all products at once
-    const productIds = productData.products.map(p => p.product_id);
+    // Fetch and enrich product data
+    const productIds = productData.products.map((p) => p.product_id);
     const products = await Product.find({ product_id: { $in: productIds } }).lean();
-    const productMap = new Map(products.map(p => [p.product_id, p]));
-    // Enrich product data
+    const productMap = new Map(products.map((p) => [p.product_id, p]));
+
     const enrichedProducts = productData.products.map((item) => {
         const prod = productMap.get(item.product_id);
         return {
@@ -63,33 +76,24 @@ const createOrder = asyncHandler(async (req, res, next) => {
 
     productData.products = enrichedProducts;
 
-    const simulatedPaymentId = `PAY_${crypto.randomBytes(8).toString("hex")}`;
-
+    // Create order (for COD and store pickup)
     const order = new Order({
         firebaseUid: uid,
         useremail: user.email,
         productData,
         shipping,
         paymentMethod,
-        meta,
-        orderToken,
-        paymentId: simulatedPaymentId,
+        orderId: orderId,
+        meta: meta || { createdAt: new Date(), fromBuyNow: false },
+        paymentId: null, // Will be null for COD/SP
+        status: paymentMethod === "sp" ? "Processing" : "Pending",
     });
 
     await order.save();
 
-    if (paymentMethod === "payu") {
-        return res.json(
-            new ApiResponse(200, "Order created, redirect to PayU", {
-                orderId: order._id,
-                txnid: order.orderToken, // txnid is your orderToken
-            })
-        );
-    }
     return res.json(
         new ApiResponse(200, "Order placed successfully", {
-            orderId: order._id,
-            paymentId: simulatedPaymentId,
+            orderId: order.orderId, // Return custom orderId
         })
     );
 });
@@ -101,40 +105,43 @@ const getOrders = asyncHandler(async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const [orders, total] = await Promise.all([
-        Order.find({ firebaseUid: uid })
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
-            .lean(),
-        Order.countDocuments({ firebaseUid: uid })
+        Order.find({ firebaseUid: uid }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+        Order.countDocuments({ firebaseUid: uid }),
     ]);
 
-    return res.json(new ApiResponse(200, orders.length > 0 ? "Orders fetched successfully" : "No orders found", {
-        count: orders.length,
-        orders: orders.map((o) => ({
-            _id: o._id,
-            orderToken: o.orderToken,
-            paymentId: o.paymentId,
-            productData: o.productData,
-            shipping: o.shipping,
-            paymentMethod: o.paymentMethod,
-            status: o.status,
-            createdAt: o.createdAt,
-        })),
-        pagination: {
-            page,
-            limit,
-            total,
-            pages: Math.ceil(total / limit)
-        }
-    }));
-})
+    return res.json(
+        new ApiResponse(
+            200,
+            orders.length > 0 ? "Orders fetched successfully" : "No orders found",
+            {
+                count: orders.length,
+                orders: orders.map((o) => ({
+                    orderId: o.orderId,
+                    orderToken: o.orderToken,
+                    paymentId: o.paymentId,
+                    productData: o.productData,
+                    shipping: o.shipping,
+                    paymentMethod: o.paymentMethod,
+                    status: o.status,
+                    createdAt: o.createdAt,
+                })),
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    pages: Math.ceil(total / limit),
+                },
+            }
+        )
+    );
+});
 
 const getOrderById = asyncHandler(async (req, res, next) => {
-
     const uid = req.user.uid;
-    const { id } = req.params;
-    const order = await Order.findOne({ $or: [{ _id: id }, { firebaseUid: uid }] }).lean();
+    const { orderId } = req.params;
+    console.log("Fetching order with orderId:", orderId);
+
+    const order = await Order.findOne({ orderId, firebaseUid: uid }).lean();
 
     if (!order) {
         return next(new ApiError(404, "Order not found"));
@@ -142,6 +149,5 @@ const getOrderById = asyncHandler(async (req, res, next) => {
 
     return res.json(new ApiResponse(200, "Order fetched successfully", order));
 });
-
 
 export { createOrder, getOrders, getOrderById };

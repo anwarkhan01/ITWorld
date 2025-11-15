@@ -1,25 +1,29 @@
 import { payuClient, CreateTransaction } from "../config/payu.js";
 import { randomBytes } from "crypto";
+import crypto from "crypto"; // Add this import
 import Order from "../models/order.model.js";
-import asyncHandler from "../utils/asyncHandler.js"
+import asyncHandler from "../utils/asyncHandler.js";
+import ApiError from "../utils/ApiError.js";
 
 /**
  * Step 1 — User begins online payment
  * No order is created here
  */
 const startPayU = asyncHandler(async (req, res) => {
-  const { productData, shipping, user } = req.body;
+  const { productData, shipping } = req.body;
+  const { email, uid } = req.user;
   const txnid = "PAYU_" + Math.floor(Math.random() * 45825666);
+
   const paymentData = await CreateTransaction({
     txnid: txnid,
     amount: productData.totalPrice,
     productInfo: `Order for ${productData.products.length} items`,
     firstName: shipping.name,
-    email: user.email,
+    email: email,
     phone: shipping.phone,
-    udf1: user.firebaseUid,
+    udf1: uid,
     udf2: JSON.stringify(shipping),
-    udf3: JSON.stringify(productData)
+    udf3: JSON.stringify(productData),
   });
 
   const nonce = randomBytes(16).toString("base64");
@@ -35,128 +39,68 @@ const startPayU = asyncHandler(async (req, res) => {
   );
 
   res.send(patchedHtml);
-})
-
+});
 
 /**
  * Step 2 — PayU success → now create the order
  */
 const payuSuccess = asyncHandler(async (req, res) => {
-  console.log("payment successful")
+  console.log("payment successful");
   const txnid = req.params.txnid;
 
-  const verify = await payuClient.verifyPayment(txnid);
-  const info = verify.transaction_details[txnid];
+  try {
+    const verify = await payuClient.verifyPayment(txnid);
+    const info = verify.transaction_details[txnid];
 
-  if (!info || info.status !== "success") {
-    return res.redirect(`${process.env.FRONTEND_URL}/payment/payment-success`);
+    if (!info || info.status !== "success") {
+      console.log("Payment verification failed or status not success");
+      return res.redirect(`${process.env.FRONTEND_URL}/payment/payment-failed`);
+    }
+
+    console.log("Payment info:", info);
+
+    // Generate custom orderId
+    const orderId = [...crypto.getRandomValues(new Uint8Array(12))]
+      .map((b) => b.toString(36).padStart(2, "0"))
+      .join("")
+      .slice(0, 20)
+      .toUpperCase();
+
+    // Parse stored data from UDF fields
+    const productData = JSON.parse(info.udf3);
+    const shipping = JSON.parse(info.udf2);
+    const firebaseUid = info.udf1;
+
+    // Create order in database
+    const order = await Order.create({
+      firebaseUid: firebaseUid,
+      useremail: info.email,
+      productData,
+      shipping,
+      orderId: orderId, // Custom order ID
+      paymentMethod: "payu",
+      orderToken: txnid, // PayU transaction ID
+      paymentId: info.mihpayid, // PayU payment ID
+      status: "Processing",
+      meta: { createdAt: new Date(), fromBuyNow: false },
+    });
+
+    console.log("Order created:", order.orderId);
+
+    // Redirect to order details page using custom orderId
+    return res.redirect(`${process.env.FRONTEND_URL}/orders/${order.orderId}`);
+  } catch (error) {
+    console.error("PayU success handler error:", error);
+    return res.redirect(`${process.env.FRONTEND_URL}/payment/payment-failed`);
   }
-
-  console.log("info................", info)
-  // Reconstruct original data
-  console.log("Udf3", info.udf3)
-  const productData = JSON.parse(info.udf3)
-  const shipping = JSON.parse(info.udf2);
-
-  const order = await Order.create({
-    firebaseUid: info.udf1,
-    useremail: info.email,
-    productData,
-    shipping,
-    paymentMethod: "payu",
-    orderToken: txnid,
-    paymentId: info.mihpayid,
-    status: "Processing",
-    meta: { createdAt: new Date(), fromBuyNow: false },
-  });
-
-  return res.redirect(`${process.env.FRONTEND_URL}/orders/${order._id}`);
-})
-
+});
 
 /**
  * Step 3 — PayU failure
  */
 const payuFailure = asyncHandler(async (req, res) => {
-  return res.redirect(`${process.env.FRONTEND_URL}/cart`);
-})
+  console.log("Payment failed");
+  return res.redirect(`${process.env.FRONTEND_URL}/payment/payment-failed`);
+});
 
-
-
-export { startPayU, payuSuccess, payuFailure }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import asyncHandler from "../utils/asyncHandler.js";
-// import { payuClient, CreateTransaction } from "../config/payu.js";
-// import { randomBytes } from "crypto";
-
-// const getPayment = asyncHandler(async (req, res) => {
-//   const paymentData = await CreateTransaction({
-//     amount: 899,
-//     productInfo: { "name": "Test Product", "price": 899 },
-//     firstName: "John Doe",
-//     email: "anwarkhan84088@gmail.com",
-//     phone: 8408852662,
-//     udf1: "udf1",
-//     udf2: "udf2",
-//     udf3: "udf3",
-//     udf4: "udf4",
-//     udf5: "udf5",
-//   });
-
-//   // Generate nonce
-//   const nonce = randomBytes(16).toString("base64");
-
-//   // Set CSP with nonce
-//   res.setHeader(
-//     "Content-Security-Policy",
-//     `script-src 'self' 'nonce-${nonce}' https://test.payu.in https://secure.payu.in https://info.payu.in; frame-src 'self' https://test.payu.in https://secure.payu.in;`
-//   );
-
-//   // Inject nonce into PayU's HTML response
-//   // const modifiedHTML = paymentData.replace(
-//   //   /<script>/g,
-//   //   `<script nonce="${nonce}">`
-//   // );
-
-//   const patchedHtml = paymentData.replace(
-//     /<script[^>]*>/i,
-//     `<script nonce="${nonce}">`
-//   );
-//   res.send(patchedHtml);
-// });
-
-// export { getPayment };
+export { startPayU, payuSuccess, payuFailure };
