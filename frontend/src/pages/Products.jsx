@@ -1,6 +1,6 @@
 import {useMemo, useState, useEffect} from "react";
 import {Frown, SlidersHorizontal, X, ArrowUpDown} from "lucide-react";
-import ProductCardAction from "../components/ProductCardAction";
+import ProductCardAction from "../components/ProductCardAction.jsx";
 import SidebarFilter from "../components/SidebarFilter.jsx";
 import {useCart} from "../contexts/CartContext.jsx";
 import {useProducts} from "../contexts/ProductsContext.jsx";
