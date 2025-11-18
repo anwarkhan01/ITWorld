@@ -86,7 +86,7 @@ const createOrder = asyncHandler(async (req, res, next) => {
         orderId: orderId,
         meta: meta || { createdAt: new Date(), fromBuyNow: false },
         paymentId: null, // Will be null for COD/SP
-        status: paymentMethod === "sp" ? "Processing" : "Pending",
+        status: paymentMethod === "sp" ? "processing" : "pending",
     });
 
     await order.save();

@@ -1,6 +1,5 @@
 import PayU from "payu-websdk";
 import crypto from "crypto";
-import asyncHandler from "../utils/asyncHandler.js";
 
 const payuClient = new PayU({
     key: process.env.PAYU_KEY,
@@ -21,11 +20,8 @@ const CreateTransaction = async ({
     udf5 = "",
 }) => {
 
-    console.log("udf1", udf1)
-    console.log("udf2", udf2)
     console.log("udf3", udf3)
-    console.log("udf4", udf4)
-    console.log("udf5", udf5)
+
     const hashString =
         `${process.env.PAYU_KEY}|${txnid}|${amount}|${productInfo}|${firstName}|${email}|${udf1}|${udf2}|${udf3}|${udf4}|${udf5}|||||||||||${process.env.PAYU_SALT}`;
 
