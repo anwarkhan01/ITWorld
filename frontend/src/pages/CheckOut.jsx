@@ -4,10 +4,7 @@ import {
   ShoppingCart,
   MapPin,
   CreditCard,
-  Smartphone,
-  Wallet,
   Banknote,
-  Landmark,
   Edit2,
   Check,
   Loader2,
@@ -17,7 +14,6 @@ import Toast from "../components/Toast.jsx";
 import {useCart} from "../contexts/CartContext";
 import {useAuth} from "../contexts/AuthContext.jsx";
 import {useProducts} from "../contexts/ProductsContext.jsx";
-import {v4 as uuidv4} from "uuid";
 import {useOrder} from "../contexts/OrderContext.jsx";
 
 const CheckoutPage = () => {
@@ -254,7 +250,7 @@ const CheckoutPage = () => {
   };
 
   const buildOrderPayload = () => {
-    const userId = mongoUser?._id || user?.uid || ""; // prefer mongo user id if available
+    const userId = mongoUser?._id || user?.uid || "";
     const productsList = itemsToCheckout.map((it) => ({
       product_id: it.product_id,
       product_name: it.product_name,
@@ -321,8 +317,6 @@ const CheckoutPage = () => {
           type: "success",
         });
         setShowToast(true);
-
-        // Navigate to order details page
         navigate(`/orders/${result.data.orderId}`);
       } else {
         setToastData({
@@ -355,12 +349,8 @@ const CheckoutPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 sm:py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 px-4 py-4 sm:px-64 sm:py-8 lg:px-8 lg:py-4">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-8">
-          Checkout
-        </h1>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Contact Information */}
@@ -836,49 +826,8 @@ const CheckoutPage = () => {
 
           {/* Right Column - Order Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow p-4 sm:p-6 lg:sticky lg:top-8">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
-                Order Summary
-              </h2>
-
-              <div className="space-y-4 mb-6 max-h-64 overflow-y-auto">
-                {[...itemsToCheckout].reverse().map((item) => (
-                  <div
-                    key={item.product_id}
-                    className="flex items-start space-x-3"
-                  >
-                    <img
-                      src={item.image || "/placeholder.png"}
-                      alt={item.product_name}
-                      className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src =
-                          "https://placehold.co/600x400?text=Image+Not+Found";
-                      }}
-                      loading="lazy"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
-                        {item.product_name}
-                      </p>
-                      <p className="text-xs text-gray-500">{item.brand}</p>
-                      <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                        Qty: {item.quantity ?? 1} × ₹
-                        {(item.price || 0).toLocaleString("en-IN")}
-                      </p>
-                    </div>
-                    <p className="text-xs sm:text-sm font-medium text-gray-900">
-                      ₹
-                      {(
-                        (item.price || 0) * (item.quantity ?? 1)
-                      ).toLocaleString("en-IN")}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t pt-4 space-y-2">
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6 lg:sticky lg:top-20">
+              <div className="pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
                   <span className="text-gray-900">

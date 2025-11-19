@@ -41,10 +41,8 @@ export default function Cart() {
   };
 
   return (
-    <main className="bg-gray-50 min-h-screen py-10">
+    <main className="bg-gray-50 min-h-screen py-4">
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">Your Cart</h1>
-
         {cartItems.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-10 text-center">
             <p className="text-gray-500 text-sm">Your cart is empty.</p>
