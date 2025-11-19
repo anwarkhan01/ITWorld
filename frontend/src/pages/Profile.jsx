@@ -26,7 +26,7 @@ const Profile = () => {
   const [toastData, setToastData] = useState({});
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
-  const {orders, orderLoading, error: orderError} = useOrder();
+  const {orders, orderLoading, error: orderError, fetchOrders} = useOrder();
   const [addressData, setAddressData] = useState({
     fullAddress: "",
     landmark: "",
@@ -40,6 +40,10 @@ const Profile = () => {
   const [checkingPincode, setCheckingPincode] = useState(false);
   const [pincodeStatus, setPincodeStatus] = useState(null);
   const [pincodeMessage, setPincodeMessage] = useState("");
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   // Initialize form data from mongoUser
   useEffect(() => {
@@ -550,8 +554,8 @@ const Profile = () => {
 
                   return (
                     <div
-                      key={order._id}
-                      onClick={() => navigate(`/orders/${order._id}`)}
+                      key={order.orderId}
+                      onClick={() => navigate(`/orders/${order.orderId}`)}
                       className="flex justify-between items-center py-3 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors px-2"
                     >
                       <div>

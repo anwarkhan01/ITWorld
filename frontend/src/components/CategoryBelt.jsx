@@ -219,7 +219,7 @@ const CategoryBelt = ({
                             animate={{opacity: 1, y: 0}}
                             exit={{opacity: 0, y: 10}}
                             transition={{duration: 0.15}}
-                            className="fixed mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden z-60"
+                            className="fixed mt-1 w-56 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden z-60"
                             style={{
                               top:
                                 categoryRefs.current[

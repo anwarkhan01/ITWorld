@@ -17,7 +17,6 @@ const Navbar = () => {
   const location = useLocation();
   const mobileMenuRef = useRef(null);
 
-  // Check if we're on cart or checkout page
   const hideCategoryBelt = ["/cart", "/checkout"].includes(location.pathname);
 
   useEffect(() => {
@@ -173,6 +172,41 @@ const Navbar = () => {
             </div>
           </div>
         </div>
+        <AnimatePresence>
+          {showMobileSearch && (
+            <motion.div
+              initial={{height: 0, opacity: 0}}
+              animate={{height: "auto", opacity: 1}}
+              exit={{height: 0, opacity: 0}}
+              transition={{duration: 0.2}}
+              className="md:hidden overflow-hidden pb-3"
+            >
+              <div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSearch(e);
+                      }
+                    }}
+                    placeholder="Search products..."
+                    className="w-full bg-gray-800 text-gray-200 placeholder-gray-400 px-4 py-2 pr-10 rounded-full border border-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSearch}
+                    className="absolute right-2 p-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400 transition-colors"
+                  >
+                    <Search className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Category Belt - Hidden on cart and checkout pages */}
         {!hideCategoryBelt && (

@@ -1,11 +1,14 @@
-import {createContext, useContext, useState} from "react";
+import {createContext, useContext, useEffect, useState} from "react";
 import {useAuth} from "./AuthContext";
 
 const OrderContext = createContext();
 
 export const OrderProvider = ({children}) => {
-  const {user, mongoUser} = useAuth();
+  const {user, mongoUser, loading} = useAuth();
   const [isOrderProcessing, setIsOrderProcessing] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderError, setOrderError] = useState(null);
 
   const createOrder = async (orderData) => {
     if (!user) throw new Error("User not authenticated");
@@ -94,6 +97,9 @@ export const OrderProvider = ({children}) => {
   const fetchOrders = async (page = 1, limit = 10) => {
     if (!user) throw new Error("User not authenticated");
 
+    setOrderLoading(true);
+    setOrderError(null);
+
     try {
       const token = await user.getIdToken();
       const resp = await fetch(
@@ -112,7 +118,8 @@ export const OrderProvider = ({children}) => {
       if (!resp.ok) {
         throw new Error(data.message || "Failed to fetch orders");
       }
-
+      setOrders(data.data.orders || []);
+      console.log(data);
       return {
         success: true,
         data: data.data,
@@ -123,6 +130,8 @@ export const OrderProvider = ({children}) => {
         success: false,
         message: error.message || "Failed to fetch orders",
       };
+    } finally {
+      setOrderLoading(false);
     }
   };
 
@@ -164,6 +173,9 @@ export const OrderProvider = ({children}) => {
     fetchOrders,
     fetchOrderById,
     isOrderProcessing,
+    orders,
+    orderLoading,
+    orderError,
   };
 
   return (

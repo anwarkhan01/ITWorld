@@ -2,36 +2,22 @@ import React, {useEffect, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {useOrder} from "../contexts/OrderContext.jsx";
 import {Loader2, CheckCircle, Truck, XCircle, ChevronRight} from "lucide-react";
+import {useAuth} from "../contexts/AuthContext.jsx";
 
 const Orders = () => {
   const navigate = useNavigate();
-  const {fetchOrders} = useOrder();
-  const [orders, setOrders] = useState([]);
-  const [orderLoading, setOrderLoading] = useState(false);
+  const {fetchOrders, orders, orderLoading} = useOrder();
+  const {loading, user} = useAuth();
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const loadOrders = async () => {
-      setOrderLoading(true);
-      setError(null);
-      try {
-        const res = await fetchOrders();
-        console.log("res", res);
-        if (res.success) {
-          setOrders(res.data.orders || []);
-        } else {
-          setError(res.message || "Failed to load orders");
-        }
-      } catch (err) {
-        console.error("Error loading orders:", err);
-        setError("Failed to load orders");
-      } finally {
-        setOrderLoading(false);
-      }
-    };
-
-    loadOrders();
-  }, [fetchOrders]);
+    if (loading) return;
+    if (!user) {
+      setError("User not authorized");
+      return;
+    }
+    fetchOrders();
+  }, [loading]);
 
   if (orderLoading) {
     return (

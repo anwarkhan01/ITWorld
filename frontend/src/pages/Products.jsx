@@ -1,5 +1,5 @@
 import {useMemo, useState, useEffect} from "react";
-import {Frown, SlidersHorizontal, X, ArrowUpDown} from "lucide-react";
+import {Frown, SlidersHorizontal, X, ArrowUpDown, Maximize} from "lucide-react";
 import ProductCardAction from "../components/ProductCardAction.jsx";
 import SidebarFilter from "../components/SideBarFilter.jsx";
 import {useCart} from "../contexts/CartContext.jsx";
@@ -23,6 +23,11 @@ export default function Products() {
   const category = searchParams.get("category");
   const brandParam = searchParams.get("brand");
   const search = searchParams.get("search");
+  const rawMaxPriceParam = searchParams.get("maxPrice");
+  const maxPriceFromQuery =
+    rawMaxPriceParam !== null && !Number.isNaN(Number(rawMaxPriceParam))
+      ? Math.max(0, parseInt(rawMaxPriceParam, 10))
+      : null;
 
   const isSearchMode = Boolean(search);
   const isCategoryMode = Boolean(category);
@@ -46,7 +51,13 @@ export default function Products() {
   // Compute filters
   useEffect(() => {
     const computeDynamicFilters = async () => {
+      console.log("computeDynamicFilters called");
       try {
+        const normalizeMax = (maxValue) => {
+          if (!Number.isFinite(maxValue) || maxValue <= 0) return 500000;
+          return maxValue;
+        };
+
         if (isCategoryMode && category) {
           const res = await fetch(
             `${
@@ -59,8 +70,15 @@ export default function Products() {
             ...new Set(prods.map((p) => p.brand).filter(Boolean)),
           ];
           const maxPrice = Math.max(...prods.map((p) => p.price || 0));
+          const normalizedMax = normalizeMax(maxPrice);
           setAllAvailableBrands(brands.sort());
-          setCategoryMaxPrice(maxPrice || 500000);
+          setCategoryMaxPrice(normalizedMax);
+          setPriceRange([
+            0,
+            maxPriceFromQuery !== null
+              ? Math.min(maxPriceFromQuery, normalizedMax)
+              : normalizedMax,
+          ]);
           setDerivedCategories([category]);
         } else if (isSearchMode && products.length > 0) {
           const categories = [...new Set(products.map((p) => p.category))];
@@ -68,8 +86,15 @@ export default function Products() {
             ...new Set(products.map((p) => p.brand).filter(Boolean)),
           ];
           const maxPrice = Math.max(...products.map((p) => p.price || 0));
+          const normalizedMax = normalizeMax(maxPrice);
           setAllAvailableBrands(brands.sort());
-          setCategoryMaxPrice(maxPrice || 500000);
+          setCategoryMaxPrice(normalizedMax);
+          setPriceRange([
+            0,
+            maxPriceFromQuery !== null
+              ? Math.min(maxPriceFromQuery, normalizedMax)
+              : normalizedMax,
+          ]);
           setDerivedCategories(categories.sort());
         }
       } catch (err) {
@@ -77,13 +102,17 @@ export default function Products() {
       }
     };
     computeDynamicFilters();
-  }, [category, products, isSearchMode, isCategoryMode]);
+  }, [category, products, isSearchMode, isCategoryMode, maxPriceFromQuery]);
 
-  const handlePriceChange = (newMax) => {
-    const val = parseInt(newMax);
-    setPriceRange([0, val]);
+  const handlePriceChange = (val) => {
+    const effectiveMax = Number.isFinite(categoryMaxPrice)
+      ? categoryMaxPrice
+      : 500000;
+    const parsed = Math.max(0, Math.min(Number(val) || 0, effectiveMax));
+    setPriceRange([0, parsed || effectiveMax]);
     const params = new URLSearchParams(searchParams);
-    params.set("maxPrice", val);
+    if (parsed === 0 || parsed >= effectiveMax) params.delete("maxPrice");
+    else params.set("maxPrice", parsed);
     setSearchParams(params);
   };
 
@@ -202,6 +231,7 @@ export default function Products() {
               availableBrands={allAvailableBrands}
               derivedCategories={derivedCategories}
               priceRange={priceRange}
+              setPriceRange={setPriceRange}
               maxPrice={categoryMaxPrice}
               onPriceChange={handlePriceChange}
               formatINR={formatINR}
@@ -253,8 +283,7 @@ export default function Products() {
             className="fixed inset-0 backdrop-blur-[1px] bg-opacity-40 z-40"
           />
           <div className="fixed top-0 left-0 h-full w-80 max-w-[85%] bg-white shadow-xl z-50 animate-slideInLeft">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+            <div className="flex items-center justify-end p-4 border-b">
               <button
                 onClick={() => setShowFilters(false)}
                 className="text-gray-600 hover:text-gray-900"
@@ -270,6 +299,7 @@ export default function Products() {
                 availableBrands={allAvailableBrands}
                 derivedCategories={derivedCategories}
                 priceRange={priceRange}
+                setPriceRange={setPriceRange}
                 maxPrice={categoryMaxPrice}
                 onPriceChange={handlePriceChange}
                 formatINR={formatINR}

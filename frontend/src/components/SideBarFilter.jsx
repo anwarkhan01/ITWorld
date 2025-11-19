@@ -8,6 +8,7 @@ export default function SidebarFilter({
   availableBrands,
   derivedCategories = [],
   priceRange,
+  setPriceRange,
   maxPrice,
   onPriceChange,
   formatINR,
@@ -115,25 +116,13 @@ export default function SidebarFilter({
           max={maxPrice}
           step="1000"
           value={priceRange[1]}
-          onChange={(e) => onPriceChange(e.target.value)}
+          onChange={(e) => {
+            const value = parseInt(e.target.value, 10) || 0;
+            setPriceRange([0, value]);
+            onPriceChange && onPriceChange(value);
+          }}
           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
         />
-
-        <div className="flex justify-between items-center gap-2 mt-3">
-          <select className="flex-1 border border-gray-300 rounded-md px-2 py-1 text-xs">
-            <option>Min</option>
-            <option>₹10000</option>
-            <option>₹25000</option>
-            <option>₹50000</option>
-          </select>
-          <span className="text-gray-500 text-xs">to</span>
-          <select className="flex-1 border border-gray-300 rounded-md px-2 py-1 text-xs">
-            <option>{formatINR(maxPrice)}+</option>
-            <option>₹50000</option>
-            <option>₹100000</option>
-            <option>₹150000</option>
-          </select>
-        </div>
       </div>
     </div>
   );
