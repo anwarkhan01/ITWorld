@@ -85,8 +85,8 @@ const createOrder = asyncHandler(async (req, res, next) => {
         paymentMethod,
         orderId: orderId,
         meta: meta || { createdAt: new Date(), fromBuyNow: false },
-        paymentId: null, // Will be null for COD/SP
-        status: paymentMethod === "sp" ? "processing" : "pending",
+        paymentId: null,
+        status: "pending",
     });
 
     await order.save();
@@ -150,4 +150,28 @@ const getOrderById = asyncHandler(async (req, res, next) => {
     return res.json(new ApiResponse(200, "Order fetched successfully", order));
 });
 
-export { createOrder, getOrders, getOrderById };
+const cancelOrder = asyncHandler(async (req, res, next) => {
+    const { orderId } = req.params;
+    const { cancellation_reason } = req.body
+    if (!orderId) {
+        next(new ApiError(300, "OrderId is required for cancellation of the order"))
+    }
+    const resp = await Order.findOneAndUpdate(
+        { $and: [{ orderId, firebaseUid: req.user.uid }] },
+        {
+            $set:
+            {
+                status: "cancelled",
+                "cancelled.isCancelled": true,
+                "cancelled.cancellation_reason": cancellation_reason,
+                "cancelled.cancelledAt": new Date()
+            }
+        },
+        { new: true }
+    )
+
+    console.log(resp)
+    res.json(new ApiResponse(200, "Order Cancelled Successfully!", resp))
+})
+
+export { createOrder, getOrders, getOrderById, cancelOrder };

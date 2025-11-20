@@ -46,21 +46,29 @@ const metaSchema = new mongoose.Schema(
 
 const orderSchema = new mongoose.Schema(
     {
-        firebaseUid: { type: String, required: true, index: true }, // NOT unique - users can have multiple orders
+        firebaseUid: { type: String, required: true, index: true },
         useremail: { type: String },
         productData: { type: productDataSchema, required: true },
         shipping: { type: shippingSchema, required: true },
         paymentMethod: {
             type: String,
-            enum: ["sp", "cod", "upi", "card", "payu", "online"],
+            enum: ["sp", "upi", "cc", "dc", "nb", "emi", "upi_p", "unknown"],
             required: true,
         },
         orderId: { type: String, required: true },
-        paymentId: { type: String, default: null }, // will hold Razorpay/Stripe payment ID later
+        paymentId: { type: String, default: null },
+        txnId: { type: String, default: null },
         status: {
             type: String,
-            enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+            enum: ["pending", "processing", "shipped", "delivered", "cancelled", "refunded"],
             default: "pending",
+        },
+        cancelled: {
+            isCancelled: { type: Boolean, default: false },
+            cancellation_reason: { type: String, default: null },
+            cancelledAt: { type: Date, default: null },
+            refunded: { type: Boolean, default: false },
+            refundId: { type: String, default: null },
         },
         meta: { type: metaSchema, required: true },
     },
@@ -68,7 +76,6 @@ const orderSchema = new mongoose.Schema(
 );
 
 orderSchema.index({ firebaseUid: 1, createdAt: -1 }); // optimized query for user order history
-orderSchema.index({ orderToken: 1 }); // unique index already defined in schema
 orderSchema.index({ paymentId: 1 }); // index for payment lookup (sparse index for null values)
 
 export default mongoose.model("Order", orderSchema);

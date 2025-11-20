@@ -12,11 +12,10 @@ const startPayU = asyncHandler(async (req, res) => {
 
   const txnid = "PAYU_" + Math.floor(Math.random() * 45825666);
 
-  // store productData in cache
   const ref = crypto.randomBytes(8).toString("hex");
   cache.set(ref, { productData, shipping, uid });
 
-  setTimeout(() => cache.delete(ref), 10 * 60 * 1000);
+  setTimeout(() => cache.delete(ref), 20 * 60 * 1000);
 
   const paymentData = await CreateTransaction({
     txnid,
@@ -74,10 +73,10 @@ const payuSuccess = asyncHandler(async (req, res) => {
     productData,
     shipping,
     orderId,
-    paymentMethod: "payu",
-    orderToken: txnid,
+    paymentMethod: info.mode.toLowerCase(),
     paymentId: info.mihpayid,
-    status: "processing",
+    txnId: info.txnid,
+    status: "pending",
     meta: { createdAt: new Date(), fromBuyNow: false },
   });
 
