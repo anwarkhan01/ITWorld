@@ -44,9 +44,9 @@ const AuthRoute = ({children}) => {
     );
   }
 
-  // if (user) {
-  //   return <Navigate to="/" replace />;
-  // }
+  if (user) {
+    return <Navigate to="/profile" replace />;
+  }
 
   return children;
 };

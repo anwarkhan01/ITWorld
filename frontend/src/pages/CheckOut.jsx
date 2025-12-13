@@ -317,7 +317,9 @@ const CheckoutPage = () => {
           type: "success",
         });
         setShowToast(true);
-        navigate(`/orders/${result.data.orderId}`);
+        setTimeout(() => {
+          navigate(`/orders/${result.data.orderId}`);
+        }, 1500);
       } else {
         setToastData({
           message: result.message || "Failed to place order",

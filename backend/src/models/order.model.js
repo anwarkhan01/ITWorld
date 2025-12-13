@@ -69,6 +69,8 @@ const orderSchema = new mongoose.Schema(
             cancelledAt: { type: Date, default: null },
             refunded: { type: Boolean, default: false },
             refundId: { type: String, default: null },
+            refundDate: { type: Date, default: null },
+            refundAmount: { type: Number, default: null },
         },
         meta: { type: metaSchema, required: true },
     },
