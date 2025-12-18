@@ -1,16 +1,16 @@
-import {useParams, useNavigate} from "react-router-dom";
-import {useOrder} from "../contexts/OrderContext.jsx";
-import {useAuth} from "../contexts/AuthContext.jsx";
-import {useProducts} from "../contexts/ProductsContext.jsx";
-import {ArrowLeft, CheckCircle, XCircle, Truck, Loader2} from "lucide-react";
-import {useState, useEffect} from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useOrder } from "../contexts/OrderContext.jsx";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import { useProducts } from "../contexts/ProductsContext.jsx";
+import { ArrowLeft, CheckCircle, XCircle, Truck, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const OrderDetail = () => {
-  const {orderId} = useParams();
+  const { orderId } = useParams();
   const navigate = useNavigate();
-  const {fetchOrderById} = useOrder();
-  const {getProductsByIds} = useProducts();
-  const {user} = useAuth();
+  const { fetchOrderById } = useOrder();
+  const { getProductsByIds } = useProducts();
+  const { user } = useAuth();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(!order);
   const [error, setError] = useState("");
@@ -47,7 +47,7 @@ const OrderDetail = () => {
     };
 
     loadOrder();
-  }, [orderId, user]);
+  }, [orderId, user, cancelling]);
 
   if (loading)
     return (
@@ -90,9 +90,14 @@ const OrderDetail = () => {
   };
 
   const statusColors = {
+    pending: "text-green-700 bg-green-100",
+    processing: "text-blue-700 bg-blue-100",
+    ready: "text-green-700 bg-green-100",
+    pickedup: "text-green-700 bg-green-100",
+    shipped: "text-cyan-700 bg-purple-100",
     delivered: "text-green-700 bg-green-100",
-    pending: "text-yellow-700 bg-yellow-100",
     cancelled: "text-red-700 bg-red-100",
+    refunded: "text-yellow-700 bg-gray-200",
   };
 
   const handleCancelOrder = async () => {
@@ -135,6 +140,7 @@ const OrderDetail = () => {
       );
 
       const data = await res.json();
+      await fetchOrderById();
       if (!data.success) {
         setError(data.message || "Unable to cancel order");
         setCancelling(false);
@@ -165,6 +171,17 @@ const OrderDetail = () => {
     setError("");
   };
 
+  const statusMessages = {
+    pending: "Order placed successfully",
+    processing: "Order is being processed",
+    ready: "Order is ready for pickup",
+    pickedup: "Order picked Successfully",
+    shipped: "Order is Out for Delivery",
+    delivered: "Order delivered successfully",
+    cancelled: "Order was cancelled",
+    refunded: "Payment has been refunded",
+  };
+  const isStorePickup = order.paymentMethod === "sp";
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-8 lg:px-16">
       {true && (
@@ -178,8 +195,10 @@ const OrderDetail = () => {
                 statusColors[order.status]
               }`}
             >
-              {statusIcons[order.status]}
-              <span className="ml-1">{order.status}</span>
+              {/* {statusIcons[order.status]} */}
+              <span className="ml-1">
+                {statusMessages[order.status] || order.status}
+              </span>
             </div>
           </div>
 
@@ -220,39 +239,46 @@ const OrderDetail = () => {
                 ))}
               </div>
             </div>
-
             {/* Summary */}
+
             <div>
               <h3 className="text-md font-semibold text-gray-800 mb-3">
                 Shipping & Payment
               </h3>
-              <div className="text-sm text-gray-700 space-y-1">
-                <p className="font-medium">{order.shipping.name}</p>
-                <p>{order.shipping.phone}</p>
-                <p>
-                  {order.shipping.address}, {order.shipping.city},{" "}
-                  {order.shipping.state} - {order.shipping.pincode}
-                </p>
-                {order.shipping.landmark && (
-                  <p>Landmark: {order.shipping.landmark}</p>
-                )}
-              </div>
+
+              {/* DELIVERY ADDRESS (ONLY FOR DELIVERY ORDERS) */}
+              {!isStorePickup && (
+                <div className="text-sm text-gray-700 space-y-1">
+                  <p className="font-medium">{order.shipping.name}</p>
+                  <p>{order.shipping.phone}</p>
+                  <p>
+                    {order.shipping.address}, {order.shipping.city},{" "}
+                    {order.shipping.state} - {order.shipping.pincode}
+                  </p>
+                  {order.shipping.landmark && (
+                    <p>Landmark: {order.shipping.landmark}</p>
+                  )}
+                </div>
+              )}
 
               <div className="border-t border-gray-200 my-3"></div>
 
+              {/* PAYMENT */}
               <p>Payment Method: {order.paymentMethod.toUpperCase()}</p>
-              {order?.paymentId ? (
-                <p>Payment ID: {order.paymentId || "N/A"}</p>
-              ) : null}
+              {order?.paymentId && <p>Payment ID: {order.paymentId}</p>}
+
               <div className="border-t border-gray-200 my-3"></div>
 
+              {/* PRICE */}
               <p>
                 Total: ₹{order.productData.totalPrice.toLocaleString("en-IN")}
               </p>
+
               {order.productData.tax > 0 && (
                 <p>Tax: ₹{order.productData.tax.toLocaleString("en-IN")}</p>
               )}
-              {order.productData.deliveryCharge > 0 && (
+
+              {!isStorePickup && order.productData.deliveryCharge > 0 && (
                 <p>
                   Delivery: ₹
                   {order.productData.deliveryCharge.toLocaleString("en-IN")}
@@ -261,45 +287,158 @@ const OrderDetail = () => {
 
               <div className="border-t border-gray-200 my-3"></div>
 
+              {/* ORDER DATE */}
               <p>
                 Order Date:{" "}
-                {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                {new Date(order.createdAt).toLocaleString("en-IN", {
                   day: "2-digit",
                   month: "short",
                   year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
                 })}
               </p>
-              {order.status !== "cancelled" && (
-                <p>Expected Delivery: {deliveryDate}</p>
-              )}
-              {order.status === "cancelled" && order.cancellationDate && (
-                <p>
-                  Cancelled On:{" "}
-                  {new Date(order.cancellationDate).toLocaleDateString(
-                    "en-IN",
-                    {
+
+              {/* DELIVERY ETA (DELIVERY ONLY) */}
+              {!isStorePickup &&
+                order.status !== "cancelled" &&
+                order.status !== "shipped" &&
+                order.status !== "delivered" && (
+                  <p>
+                    Expected Delivery:{" "}
+                    {new Date(order.deliveryDate).toLocaleDateString("en-IN", {
                       day: "2-digit",
                       month: "short",
                       year: "numeric",
-                    }
+                    })}
+                  </p>
+                )}
+              {!isStorePickup &&
+                order.status !== "cancelled" &&
+                order.status == "shipped" && (
+                  <p>
+                    Your order has been shipped and is out for delivery.
+                    <br />
+                    Expected delivery today between 9:00 AM and 11:00 PM.
+                  </p>
+                )}
+              {!isStorePickup &&
+                order.status !== "cancelled" &&
+                order.status == "delivered" && (
+                  <p>
+                    Your order is delivered at:{" "}
+                    {new Date(order.deliveredOn).toLocaleDateString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                )}
+
+              {/* STORE PICKUP DETAILS */}
+              {isStorePickup && order.pickup && (
+                <>
+                  <div className="border-t border-gray-200 my-3"></div>
+
+                  <p>
+                    Pickup Method:{" "}
+                    <span className="font-medium">Store Pickup</span>
+                  </p>
+
+                  {order.pickup.storeAddress && (
+                    <p>Pickup Location: {order.pickup.storeAddress}</p>
                   )}
-                </p>
+
+                  {order.status !== "ready" &&
+                    order.status !== "cancelled" &&
+                    order.status !== "pickedup" && (
+                      <p>
+                        Order will be available at store on:{" "}
+                        {new Date(order.pickup.readyAt).toLocaleString(
+                          "en-IN",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          }
+                        )}
+                      </p>
+                    )}
+
+                  {order.status === "ready" && (
+                    <p>
+                      Order is available at store you can pick it up between
+                      11:00 AM to 10:00 Pm
+                    </p>
+                  )}
+
+                  {order.pickup.pickedUpAt && order.status === "pickedup" && (
+                    <p>
+                      Picked Up On:{" "}
+                      {new Date(order.pickup.pickedUpAt).toLocaleString(
+                        "en-IN",
+                        {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        }
+                      )}
+                    </p>
+                  )}
+                </>
               )}
-              {order.status === "cancelled" && order.refundAmount && (
-                <p>
-                  Refund Amount: ₹{order.refundAmount.toLocaleString("en-IN")}
-                </p>
-              )}
-              {order.status === "cancelled" && order.refundDate && (
-                <p>
-                  Expected Refund Date:{" "}
-                  {new Date(order.refundDate).toLocaleDateString("en-IN", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </p>
-              )}
+
+              {/* CANCELLATION */}
+              {(order.status === "cancelled" || order.status === "refunded") &&
+                order.cancelled?.cancelledAt && (
+                  <>
+                    <div className="border-t border-gray-200 my-3"></div>
+
+                    <p>
+                      Cancelled On:{" "}
+                      {new Date(order.cancelled.cancelledAt).toLocaleString(
+                        "en-IN",
+                        {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        }
+                      )}
+                    </p>
+
+                    {!isStorePickup && order.cancelled.refundAmount && (
+                      <p>
+                        Refund Amount: ₹
+                        {order.cancelled.refundAmount.toLocaleString("en-IN")}
+                      </p>
+                    )}
+
+                    {!isStorePickup &&
+                      order.status === "refunded" &&
+                      order.cancelled?.refunded && (
+                        <p>Payment refunded successfully</p>
+                      )}
+
+                    {!isStorePickup &&
+                      !order.cancelled?.refunded &&
+                      order.cancelled.refundDate && (
+                        <p>
+                          Expected Refund Date:{" "}
+                          {new Date(
+                            order.cancelled.refundDate
+                          ).toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                      )}
+                  </>
+                )}
             </div>
           </div>
         </div>

@@ -1,10 +1,10 @@
-import React, {useEffect, useState} from "react";
-import {Link, useParams} from "react-router-dom";
-import {ArrowLeft} from "lucide-react";
-import {API_BASE, getStatusColor} from "../utils/api";
+import React, { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import { API_BASE, getStatusColor } from "../utils/api";
 
 const OrderDetails = () => {
-  const {orderId} = useParams();
+  const { orderId } = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,6 +18,7 @@ const OrderDetails = () => {
         const data = await res.json();
         if (data?.data) {
           setOrder(data.data);
+          console.log(data.data);
         } else {
           throw new Error(data?.message || "Order not found");
         }
@@ -184,7 +185,7 @@ const OrderDetails = () => {
             </p> */}
 
             <p>
-              <span className="text-gray-500">Meta Created: </span>
+              <span className="text-gray-500">Order Created On: </span>
               {new Date(order.meta.createdAt).toLocaleString()}
             </p>
 

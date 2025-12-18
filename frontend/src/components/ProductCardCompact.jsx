@@ -1,5 +1,5 @@
 // src/components/ProductCard.jsx
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const formatINR = (n) =>
   new Intl.NumberFormat("en-IN", {
@@ -8,11 +8,11 @@ const formatINR = (n) =>
     maximumFractionDigits: 0,
   }).format(n);
 
-export default function ProductCard({product}) {
+export default function ProductCard({ product }) {
   return (
     <div className="group bg-card bg-white rounded-xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-lg">
       <Link to={`/product/${product.product_id}`}>
-        <div className="aspect-square bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
+        <div className="aspect-square bg-linear-to-br from-muted to-muted/50 overflow-hidden">
           <img
             src={product.image}
             alt={product.product_name}
@@ -42,7 +42,7 @@ export default function ProductCard({product}) {
 
         {/* 1–2 line intro */}
         <p className="text-sm text-muted-foreground line-clamp-2">
-          {product.intro}
+          {product.intro_description}
         </p>
 
         <div className="pt-2">

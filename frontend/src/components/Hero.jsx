@@ -1,5 +1,5 @@
-import React, {useState, useEffect} from "react";
-import {ChevronLeft, ChevronRight} from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const heroImages = [
   "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9",
@@ -33,7 +33,7 @@ const Hero = () => {
   }, [current]);
 
   return (
-    <div className="relative w-full min-h-[calc(100dvh-64px)] md:min-h-[calc(100dvh-112.8px)] overflow-hidden">
+    <div className="relative w-full min-h-[calc(100dvh-64px)] md:min-h-[calc(100vh-190px)] overflow-hidden">
       {heroImages.map((img, index) => (
         <div
           key={index}

@@ -64,9 +64,16 @@ const payuSuccess = asyncHandler(async (req, res) => {
 
   const { productData, shipping, uid } = cached;
 
-  const orderId =
-    crypto.randomBytes(12).toString("hex").substring(0, 20).toUpperCase();
+  const orderId = crypto
+    .randomBytes(12)
+    .toString("hex")
+    .substring(0, 20)
+    .toUpperCase();
 
+  const createdAt = new Date(Date.now()); // UTC
+
+  const deliveryDate = new Date(createdAt);
+  deliveryDate.setUTCDate(deliveryDate.getUTCDate() + 5);
   const order = await Order.create({
     firebaseUid: uid,
     useremail: email,
@@ -75,6 +82,7 @@ const payuSuccess = asyncHandler(async (req, res) => {
     orderId,
     paymentMethod: info.mode.toLowerCase(),
     paymentId: info.mihpayid,
+    deliveryDate,
     txnId: info.txnid,
     status: "pending",
     meta: { createdAt: new Date(), fromBuyNow: false },
@@ -82,7 +90,6 @@ const payuSuccess = asyncHandler(async (req, res) => {
 
   return res.redirect(`${process.env.FRONTEND_URL}/orders/${order.orderId}`);
 });
-
 
 const payuFailure = asyncHandler(async (req, res) => {
   return res.redirect(`${process.env.FRONTEND_URL}/payment/payment-failed`);

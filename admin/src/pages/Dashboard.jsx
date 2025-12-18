@@ -1,11 +1,13 @@
-import React, {useEffect, useState} from "react";
-import {BarChart3, Package, ShoppingCart, Users} from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { BarChart3, Package, ShoppingCart, Users } from "lucide-react";
 import StatCard from "../components/StatCard";
-import {API_BASE, getStatusColor} from "../utils/api";
+import { API_BASE, getStatusColor } from "../utils/api";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
@@ -76,6 +78,7 @@ const Dashboard = () => {
             {stats?.recentOrders?.slice(0, 5).map((order) => (
               <div
                 key={order.orderId}
+                onClick={() => navigate(`/orders/${order.orderId}`)}
                 className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-gray-100 p-4"
               >
                 <div className="truncate">

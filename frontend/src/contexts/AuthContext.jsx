@@ -19,7 +19,7 @@ import {
 
 const AuthContext = createContext();
 
-export const AuthProvider = ({children}) => {
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [mongoUser, setMongoUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -105,7 +105,7 @@ export const AuthProvider = ({children}) => {
   const registerWithEmail = async (email, password, name) => {
     try {
       const firebaseUser = await firebaseRegister(email, password, name);
-      return {user: firebaseUser};
+      return { user: firebaseUser };
     } catch (err) {
       console.error("Email registration failed:", err);
       throw err;
@@ -128,7 +128,7 @@ export const AuthProvider = ({children}) => {
       setUser(firebaseUser);
       setMongoUser(mongoData);
 
-      return {user: firebaseUser, mongoUser: mongoData};
+      return { user: firebaseUser, mongoUser: mongoData };
     } catch (err) {
       console.error("Email login failed:", err);
       throw err;

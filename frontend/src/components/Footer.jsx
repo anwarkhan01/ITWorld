@@ -1,6 +1,6 @@
-import React from "react";
-
+import { useNavigate } from "react-router-dom";
 const Footer = () => {
+  const navigate = useNavigate();
   return (
     <footer className="bg-gray-900 text-gray-300">
       <div className="max-w-7xl mx-auto px-6 py-10 grid gap-8 md:grid-cols-4">
@@ -28,7 +28,15 @@ const Footer = () => {
         <div>
           <h3 className="text-lg font-medium text-white mb-3">Support</h3>
           <ul className="space-y-2 text-sm">
-            <li className="hover:text-white cursor-pointer">Contact Us</li>
+            <li
+              className="hover:text-white cursor-pointer"
+              onClick={() => {
+                console.log("called");
+                navigate("contact");
+              }}
+            >
+              Contact Us
+            </li>
             <li className="hover:text-white cursor-pointer">FAQs</li>
             <li className="hover:text-white cursor-pointer">Warranty</li>
             <li className="hover:text-white cursor-pointer">
