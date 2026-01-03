@@ -1,14 +1,14 @@
-import {useMemo, useState} from "react";
-import {Link, useNavigate} from "react-router-dom";
-import {Trash2, Plus, Minus, Truck} from "lucide-react";
-import {useCart} from "../contexts/CartContext.jsx";
-import {useAuth} from "../contexts/AuthContext.jsx";
+import { useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Trash2, Plus, Minus, Truck } from "lucide-react";
+import { useCart } from "../contexts/CartContext.jsx";
+import { useAuth } from "../contexts/AuthContext.jsx";
 import Toast from "../components/Toast.jsx";
 
 export default function Cart() {
-  const {cartItems, increaseQty, decreaseQty, removeFromCart, clearCart} =
+  const { cartItems, increaseQty, decreaseQty, removeFromCart, clearCart } =
     useCart();
-  const {user} = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [showToast, setShowToast] = useState(false);
   const [toastData, setToastData] = useState({});
@@ -21,9 +21,10 @@ export default function Cart() {
     const shipping = subtotal >= 999 ? 0 : 99;
     const discount = subtotal > 2000 ? 200 : 0;
     const grandTotal = Math.max(0, subtotal - discount + shipping);
-    return {subtotal, discount, shipping, grandTotal};
+    return { subtotal, discount, shipping, grandTotal };
   }, [cartItems]);
 
+  console.log(cartItems);
   const handleCheckoutClick = () => {
     navigate("/checkout");
   };
@@ -37,7 +38,7 @@ export default function Cart() {
     setShowToast(true);
   };
   const handlePincodeSuccess = (pincode) => {
-    navigate("/checkout", {state: {pincode}});
+    navigate("/checkout", { state: { pincode } });
   };
 
   return (
@@ -71,7 +72,7 @@ export default function Cart() {
                         it.image || "https://placehold.co/300x300?text=No+Image"
                       }
                       alt={it.product_name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-fill"
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src =
@@ -83,7 +84,7 @@ export default function Cart() {
                   <div className="flex-1 flex flex-col justify-between">
                     <div>
                       <Link
-                        to={`/product/${it.id}`}
+                        to={`/product/${it.product_id}`}
                         className="font-semibold text-gray-800 hover:text-blue-600 transition"
                       >
                         {it.product_name}
@@ -162,17 +163,25 @@ export default function Cart() {
                 {cartItems.toReversed().map((item) => (
                   <div
                     key={item.product_id}
-                    className="flex justify-between items-center"
+                    className="flex justify-between items-center gap-4"
                   >
-                    <div className="flex flex-col">
-                      <span className="font-medium text-gray-800">
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span
+                        className="
+            font-medium text-gray-800
+            line-clamp-2
+            max-w-full
+          "
+                      >
                         {item.product_name}
                       </span>
+
                       <span className="text-xs text-gray-500">
-                        Qty: {item.quantity} x ₹{item.price}
+                        Qty: {item.quantity} × ₹{item.price}
                       </span>
                     </div>
-                    <span className="font-medium text-gray-800">
+
+                    <span className="font-medium text-gray-800 whitespace-nowrap">
                       ₹{item.price * item.quantity}
                     </span>
                   </div>

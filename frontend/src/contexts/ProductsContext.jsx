@@ -5,11 +5,11 @@ import {
   useEffect,
   useCallback,
 } from "react";
-import {useLocation} from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 const ProductsContext = createContext();
 
-export const ProductsProvider = ({children}) => {
+export const ProductsProvider = ({ children }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const location = useLocation();
@@ -72,7 +72,7 @@ export const ProductsProvider = ({children}) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ids}),
+        body: JSON.stringify({ ids }),
       });
       if (!res.ok) throw new Error(`Failed to fetch products (${res.status})`);
 
@@ -109,7 +109,7 @@ export const ProductsProvider = ({children}) => {
 
   return (
     <ProductsContext.Provider
-      value={{products, loading, fetchProducts, getProductsByIds}}
+      value={{ products, loading, fetchProducts, getProductsByIds }}
     >
       {children}
     </ProductsContext.Provider>

@@ -9,7 +9,6 @@ const cache = new Map();
 const startPayU = asyncHandler(async (req, res) => {
   const { productData, shipping } = req.body;
   const { email, uid } = req.user;
-
   const txnid = "PAYU_" + Math.floor(Math.random() * 45825666);
 
   const ref = crypto.randomBytes(8).toString("hex");

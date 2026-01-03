@@ -1,16 +1,16 @@
-import React, {useState} from "react";
-import {useAuth} from "../../contexts/AuthContext.jsx";
-import {User, Mail, Lock, Loader2, ArrowRight} from "lucide-react";
-import {FcGoogle} from "react-icons/fc";
-import {useNavigate, useLocation} from "react-router-dom";
+import React, { useState } from "react";
+import { useAuth } from "../../contexts/AuthContext.jsx";
+import { User, Mail, Lock, Loader2, ArrowRight } from "lucide-react";
+import { FcGoogle } from "react-icons/fc";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Login = () => {
-  const {signInWithGoogle, loginWithEmail} = useAuth();
+  const { signInWithGoogle, loginWithEmail } = useAuth();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({email: "", password: ""});
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const {state} = useLocation();
+  const { state } = useLocation();
   let prevPage = state?.page;
 
   const handleGoogleSignIn = async () => {
@@ -19,11 +19,13 @@ const Login = () => {
       await signInWithGoogle();
       if (prevPage === "/checkout") {
         navigate("/checkout");
+        setLoading(false);
         return;
       }
-
+      setLoading(false);
       navigate("/");
     } catch (err) {
+      setLoading(false);
       if (err.code === "auth/popup-closed-by-user") {
         setError(
           "Sign in popup was closed before completing the sign in. Please try again."
@@ -72,12 +74,12 @@ const Login = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({...formData, [e.target.name]: e.target.value});
+    setFormData({ ...formData, [e.target.name]: e.target.value });
     setError("");
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-full bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow border border-gray-200 p-8">
         {/* Header */}
         <div className="text-center mb-8">

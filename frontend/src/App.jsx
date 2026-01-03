@@ -5,6 +5,7 @@ import Products from "./pages/Products.jsx";
 import Cart from "./pages/Cart.jsx";
 import ProductDetail from "./components/productDetail.jsx";
 import Contact from "./pages/Contact.jsx";
+import About from "./pages/About.jsx";
 import Login from "./pages/auth/Login.jsx";
 import Register from "./pages/auth/Register.jsx";
 import Profile from "./pages/Profile.jsx";
@@ -60,14 +61,15 @@ const App = () => {
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="cart" element={<Cart />} />
         <Route path="contact" element={<Contact />} />
+        <Route path="about" element={<About />} />
         <Route path="checkout" element={<CheckoutPage />} />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/orders/:orderId" element={<OrderDetail />} />
-        <Route
+        {/* <Route path="/orders" element={<Orders />} />
+        <Route path="/orders/:orderId" element={<OrderDetail />} /> */}
+        {/* <Route
           path="/payment/payment-successful"
           element={<PaymentSuccess />}
         />
-        <Route path="/payment/payment-failed" element={<PaymentFailed />} />
+        <Route path="/payment/payment-failed" element={<PaymentFailed />} /> */}
         {/* Protected Profile Route */}
         <Route
           path="profile"

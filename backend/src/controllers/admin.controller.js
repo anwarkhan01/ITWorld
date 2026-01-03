@@ -338,10 +338,11 @@ const bulkUploadProducts = asyncHandler(async (req, res) => {
         name: row.name,
         description: row.description || "",
         price: parseFloat(row.price),
+        mrp: parseFloat(row.mrp),
         category: row.category,
         stock: parseInt(row.stock) || 0,
         images: row.images
-          ? row.images.split(",").map((img) => img.trim())
+          ? row.images.split(";").map((img) => img.trim())
           : [],
         brand: row.brand || "",
         sku: row.sku || "",

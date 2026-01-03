@@ -1,5 +1,5 @@
-import React, {useState, useEffect, useMemo} from "react";
-import {useLocation, useNavigate} from "react-router-dom";
+import React, { useState, useEffect, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   ShoppingCart,
   MapPin,
@@ -8,20 +8,21 @@ import {
   Edit2,
   Check,
   Loader2,
+  Phone,
   Store,
 } from "lucide-react";
 import Toast from "../components/Toast.jsx";
-import {useCart} from "../contexts/CartContext";
-import {useAuth} from "../contexts/AuthContext.jsx";
-import {useProducts} from "../contexts/ProductsContext.jsx";
-import {useOrder} from "../contexts/OrderContext.jsx";
+import { useCart } from "../contexts/CartContext";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import { useProducts } from "../contexts/ProductsContext.jsx";
+import { useOrder } from "../contexts/OrderContext.jsx";
 
 const CheckoutPage = () => {
-  const {cartItems, clearCart} = useCart();
-  const {user, mongoUser} = useAuth();
-  const {initiatePayment, createOrder, isOrderProcessing} = useOrder();
-  const {products} = useProducts();
-  const {state} = useLocation();
+  const { cartItems, clearCart } = useCart();
+  const { user, mongoUser } = useAuth();
+  const { initiatePayment, createOrder, isOrderProcessing } = useOrder();
+  const { products } = useProducts();
+  const { state } = useLocation();
   const navigate = useNavigate();
   const [showToast, setShowToast] = useState(false);
   const [toastData, setToastData] = useState({});
@@ -32,7 +33,7 @@ const CheckoutPage = () => {
     if (!buyNowItemId) return null;
     const p = products.find((p) => p.product_id === buyNowItemId);
     if (!p) return null;
-    return {...p, quantity: buyNowQuantity}; // ensure quantity exists for buy-now flow
+    return { ...p, quantity: buyNowQuantity }; // ensure quantity exists for buy-now flow
   }, [buyNowItemId, products, buyNowQuantity]);
 
   const itemsToCheckout = buyNowItem ? [buyNowItem] : cartItems;
@@ -105,23 +106,23 @@ const CheckoutPage = () => {
   };
 
   const handleInputChange = (e) => {
-    const {name, value} = e.target;
+    const { name, value } = e.target;
 
     if (name === "phone") {
       const phoneValue = value.replace(/\D/g, "").slice(0, 10);
-      setFormData((prev) => ({...prev, [name]: phoneValue}));
+      setFormData((prev) => ({ ...prev, [name]: phoneValue }));
       if (phoneValue) validatePhone(phoneValue);
       else setPhoneError("");
     } else if (name === "pincode") {
       const pincodeValue = value.replace(/\D/g, "").slice(0, 6);
-      setFormData((prev) => ({...prev, [name]: pincodeValue}));
+      setFormData((prev) => ({ ...prev, [name]: pincodeValue }));
     } else if (name === "paymentMethod") {
-      setFormData((prev) => ({...prev, [name]: value}));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     } else {
-      setFormData((prev) => ({...prev, [name]: value}));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
 
-    if (errors[name]) setErrors((prev) => ({...prev, [name]: ""}));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const handleContactSave = async () => {
@@ -137,7 +138,7 @@ const CheckoutPage = () => {
       contactErrors.phone = phoneError || "Invalid phone number";
 
     if (Object.keys(contactErrors).length > 0) {
-      setErrors((prev) => ({...prev, ...contactErrors}));
+      setErrors((prev) => ({ ...prev, ...contactErrors }));
       return;
     }
 
@@ -152,7 +153,7 @@ const CheckoutPage = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({phone: formData.phone}),
+          body: JSON.stringify({ phone: formData.phone }),
         }
       );
 
@@ -177,11 +178,24 @@ const CheckoutPage = () => {
     else if (formData.name.trim().length < 3)
       newErrors.name = "Name must be at least 3 characters";
 
-    if (!formData.phone.trim()) newErrors.phone = "Phone number is required";
-    else if (!validatePhone(formData.phone))
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone number is required";
+      setToastData({
+        message: "Please enter your phone number!",
+        type: "information",
+      });
+      setShowToast(true);
+    } else if (!validatePhone(formData.phone))
       newErrors.phone = phoneError || "Invalid phone number";
 
-    if (!formData.address.trim()) newErrors.address = "Address is required";
+    if (!formData.address.trim()) {
+      newErrors.address = "Address is required";
+      setToastData({
+        message: "Please enter your address!",
+        type: "information",
+      });
+      setShowToast(true);
+    }
     if (!formData.city.trim()) newErrors.city = "City is required";
     if (!formData.state.trim()) newErrors.state = "State is required";
 
@@ -189,8 +203,14 @@ const CheckoutPage = () => {
     else if (!/^\d{6}$/.test(formData.pincode))
       newErrors.pincode = "Enter a valid 6-digit pincode";
 
-    if (!formData.paymentMethod)
+    if (!formData.paymentMethod) {
       newErrors.paymentMethod = "Please select a payment method";
+      setToastData({
+        message: "Please select a payment method!",
+        type: "information",
+      });
+      setShowToast(true);
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -206,7 +226,7 @@ const CheckoutPage = () => {
       addressErrors.pincode = "Enter a valid 6-digit pincode";
 
     if (Object.keys(addressErrors).length > 0) {
-      setErrors((prev) => ({...prev, ...addressErrors}));
+      setErrors((prev) => ({ ...prev, ...addressErrors }));
       return;
     }
 
@@ -256,6 +276,7 @@ const CheckoutPage = () => {
       product_name: it.product_name,
       quantity: it.quantity ?? 1,
       product_price: it.price,
+      image: it.image,
     }));
 
     const subtotal = productsList.reduce(
@@ -364,7 +385,7 @@ const CheckoutPage = () => {
                   </p>
                   <button
                     onClick={() =>
-                      navigate("/auth/login", {state: {page: "/checkout"}})
+                      navigate("/auth/login", { state: { page: "/checkout" } })
                     }
                     className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base font-medium"
                   >
@@ -441,7 +462,7 @@ const CheckoutPage = () => {
                               }));
                               setIsEditingPhone(false);
                               setPhoneError("");
-                              setErrors((prev) => ({...prev, phone: ""}));
+                              setErrors((prev) => ({ ...prev, phone: "" }));
                             }}
                             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
                           >
@@ -671,7 +692,7 @@ const CheckoutPage = () => {
                 <div
                   onClick={() =>
                     handleInputChange({
-                      target: {name: "paymentMethod", value: "sp"},
+                      target: { name: "paymentMethod", value: "sp" },
                     })
                   }
                   className={`relative border-2 rounded-xl p-5 cursor-pointer transition-all duration-200 ${
@@ -724,7 +745,7 @@ const CheckoutPage = () => {
                 <div
                   onClick={() =>
                     handleInputChange({
-                      target: {name: "paymentMethod", value: "online"},
+                      target: { name: "paymentMethod", value: "online" },
                     })
                   }
                   className={`relative border-2 rounded-xl p-5 cursor-pointer transition-all duration-200 ${
@@ -829,6 +850,7 @@ const CheckoutPage = () => {
           {/* Right Column - Order Summary */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow p-4 sm:p-6 lg:sticky lg:top-20">
+              {/* Price breakdown */}
               <div className="pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
@@ -836,12 +858,14 @@ const CheckoutPage = () => {
                     ₹{subtotal.toLocaleString("en-IN")}
                   </span>
                 </div>
+
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Tax (18% GST)</span>
                   <span className="text-gray-900">
                     ₹{tax.toLocaleString("en-IN")}
                   </span>
                 </div>
+
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Delivery Charges</span>
                   <span
@@ -851,16 +875,12 @@ const CheckoutPage = () => {
                         : "text-gray-900"
                     }
                   >
-                    {deliveryCharge === 0 ? 0 : `₹${deliveryCharge}`}
+                    {deliveryCharge === 0 ? "Free" : `₹${deliveryCharge}`}
                   </span>
                 </div>
-                {/* {deliveryCharge === 0 && (
-                  <p className="text-xs text-green-600">
-                    Free delivery on orders above ₹50,000
-                  </p>
-                )} */}
               </div>
 
+              {/* Total */}
               <div className="border-t mt-4 pt-4">
                 <div className="flex justify-between items-center">
                   <span className="text-base sm:text-lg font-semibold text-gray-900">
@@ -872,18 +892,35 @@ const CheckoutPage = () => {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handlePlaceOrder}
-                disabled={isProcessing || !user}
-                className="w-full mt-6 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed text-sm sm:text-base"
-              >
-                {isProcessing ? "Processing..." : "Place Order"}
-              </button>
+              {/* Payment not available notice */}
+              <div className="mt-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+                <p className="text-sm font-medium text-yellow-800 text-center">
+                  Online payment is currently unavailable
+                </p>
+                <p className="text-xs text-yellow-700 text-center mt-1">
+                  Please contact us to confirm availability and complete your
+                  order.
+                </p>
+              </div>
 
-              <p className="text-xs text-gray-500 text-center mt-4">
-                By placing this order, you agree to our Terms & Conditions
-              </p>
+              {/* Contact details */}
+              <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 text-center">
+                <p className="text-sm font-medium text-gray-800">
+                  Contact for order booking
+                </p>
+
+                <div className="mt-2 space-y-1text-sm flex items-center justify-center">
+                  <p className="flex items-center gap-2 text-gray-700">
+                    <Phone size={16} />
+                    <a
+                      href="tel:+919665865056"
+                      className="font-medium text-blue-600 hover:underline"
+                    >
+                      +91 96658 65056
+                    </a>
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

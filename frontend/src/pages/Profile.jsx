@@ -1,5 +1,5 @@
-import React, {useState, useEffect} from "react";
-import {useAuth} from "../contexts/AuthContext.jsx";
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext.jsx";
 import {
   Mail,
   Phone,
@@ -13,12 +13,12 @@ import {
   Package,
   ChevronRight,
 } from "lucide-react";
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Toast from "../components/Toast.jsx";
-import {useOrder} from "../contexts/OrderContext.jsx";
+import { useOrder } from "../contexts/OrderContext.jsx";
 
 const Profile = () => {
-  const {user, mongoUser, signOutWithGoogle} = useAuth();
+  const { user, mongoUser, signOutWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
@@ -26,7 +26,7 @@ const Profile = () => {
   const [toastData, setToastData] = useState({});
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
-  const {orders, orderLoading, error: orderError, fetchOrders} = useOrder();
+  const { orders, orderLoading, error: orderError, fetchOrders } = useOrder();
   const [addressData, setAddressData] = useState({
     fullAddress: "",
     landmark: "",
@@ -44,6 +44,22 @@ const Profile = () => {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  const STATUS_TEXT = {
+    pending: { label: "Order placed", text: "text-green-600" },
+    processing: { label: "Processing", text: "text-blue-600" },
+    ready: { label: "Order is Ready", text: "text-green-600" },
+    pickedup: { label: "Picked Up", text: "text-green-600" },
+    delivered: { label: "Delivered", text: "text-green-600" },
+    cancelled: { label: "Cancelled", text: "text-red-600" },
+    refunded: { label: "Refunded", text: "text-gray-600" },
+  };
+
+  const avatarUrl =
+    user?.photoURL ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      user?.displayName || user?.email || "User"
+    )}&background=111827&color=FACC15&size=128`;
 
   // Initialize form data from mongoUser
   useEffect(() => {
@@ -114,7 +130,7 @@ const Profile = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({phone}),
+          body: JSON.stringify({ phone }),
         }
       );
 
@@ -182,7 +198,7 @@ const Profile = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({address: addressData}),
+          body: JSON.stringify({ address: addressData }),
         }
       );
 
@@ -222,17 +238,13 @@ const Profile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 sm:py-8 px-4">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-12 px-4">
       <div className="max-w-3xl mx-auto">
         {/* Profile Header Card */}
         <div className="bg-white rounded-xl shadow border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
             <img
-              src={
-                user?.photoURL ||
-                mongoUser?.photoURL ||
-                "https://via.placeholder.com/120"
-              }
+              src={avatarUrl}
               alt={mongoUser?.name || user?.displayName || "User"}
               className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-gray-200 shadow-sm object-cover"
             />
@@ -377,7 +389,10 @@ const Profile = () => {
                     type="text"
                     value={addressData.landmark}
                     onChange={(e) =>
-                      setAddressData({...addressData, landmark: e.target.value})
+                      setAddressData({
+                        ...addressData,
+                        landmark: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     placeholder="Near Hospital, Mall, etc."
@@ -394,7 +409,7 @@ const Profile = () => {
                       type="text"
                       value={addressData.city}
                       onChange={(e) =>
-                        setAddressData({...addressData, city: e.target.value})
+                        setAddressData({ ...addressData, city: e.target.value })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       placeholder="Mumbai"
@@ -408,7 +423,10 @@ const Profile = () => {
                       type="text"
                       value={addressData.state}
                       onChange={(e) =>
-                        setAddressData({...addressData, state: e.target.value})
+                        setAddressData({
+                          ...addressData,
+                          state: e.target.value,
+                        })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       placeholder="Maharashtra"
@@ -447,7 +465,7 @@ const Profile = () => {
                           const value = e.target.value
                             .replace(/\D/g, "")
                             .slice(0, 6);
-                          setAddressData({...addressData, pincode: value});
+                          setAddressData({ ...addressData, pincode: value });
                         }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm pr-8"
                         placeholder="400001"
@@ -531,10 +549,12 @@ const Profile = () => {
             <div className="flex flex-col items-center justify-center text-center py-4">
               <p className="text-sm text-gray-500 mb-2">No orders yet.</p>
               <button
-                onClick={() => navigate("/orders")}
+                onClick={() =>
+                  navigate(orders.length ? "/orders" : "/products")
+                }
                 className="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
               >
-                View Orders
+                {orders.length ? "View Orders" : "Start Shopping"}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -543,6 +563,11 @@ const Profile = () => {
               <div className="divide-y divide-gray-100">
                 {orders.slice(0, 2).map((order) => {
                   const first = order.productData.products[0];
+                  const statusKey = order.status.toLowerCase();
+                  const meta = STATUS_TEXT[statusKey] ?? {
+                    label: order.status,
+                    text: "text-gray-500",
+                  };
                   const date = new Date(order.createdAt).toLocaleDateString(
                     "en-IN",
                     {
@@ -577,17 +602,8 @@ const Profile = () => {
                           ₹
                           {order.productData.totalPrice.toLocaleString("en-IN")}
                         </p>
-                        <p
-                          className={`text-xs ${
-                            order.status === "Delivered"
-                              ? "text-green-600"
-                              : order.status === "Cancelled"
-                              ? "text-red-600"
-                              : "text-yellow-600"
-                          }`}
-                        >
-                          {order.status}
-                        </p>
+
+                        <p className={`text-xs ${meta.text}`}>{meta.label}</p>
                       </div>
                     </div>
                   );

@@ -1,10 +1,17 @@
-import {useMemo, useState, useEffect} from "react";
-import {Frown, SlidersHorizontal, X, ArrowUpDown, Maximize} from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import {
+  Frown,
+  SlidersHorizontal,
+  X,
+  ArrowUpDown,
+  Maximize,
+} from "lucide-react";
 import ProductCardAction from "../components/ProductCardAction.jsx";
+import ProductCard from "../components/ProductCardCompact.jsx";
 import SidebarFilter from "../components/SideBarFilter.jsx";
-import {useCart} from "../contexts/CartContext.jsx";
-import {useProducts} from "../contexts/ProductsContext.jsx";
-import {useNavigate, useSearchParams} from "react-router-dom";
+import { useCart } from "../contexts/CartContext.jsx";
+import { useProducts } from "../contexts/ProductsContext.jsx";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -16,8 +23,8 @@ export default function Products() {
   const [showSort, setShowSort] = useState(false);
   const [categoryMaxPrice, setCategoryMaxPrice] = useState(500000);
 
-  const {addToCart} = useCart();
-  const {products, loading} = useProducts();
+  const { addToCart } = useCart();
+  const { products, loading } = useProducts();
   const navigate = useNavigate();
 
   const category = searchParams.get("category");
@@ -124,7 +131,7 @@ export default function Products() {
     newBrands.length
       ? params.set("brand", newBrands.join(","))
       : params.delete("brand");
-    navigate(`/products?${params.toString()}`, {replace: true});
+    navigate(`/products?${params.toString()}`, { replace: true });
   };
 
   const clearFilters = () => {
@@ -256,7 +263,12 @@ export default function Products() {
             {filteredProducts.length ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                 {filteredProducts.map((p) => (
-                  <ProductCardAction
+                  // <ProductCardAction
+                  //   key={p.product_id}
+                  //   product={p}
+                  //   onAdd={handleAddToCart}
+                  // />
+                  <ProductCard
                     key={p.product_id}
                     product={p}
                     onAdd={handleAddToCart}
@@ -320,11 +332,11 @@ export default function Products() {
             <h3 className="text-lg font-semibold mb-3">Sort By</h3>
             <ul className="space-y-2 text-gray-700 text-sm">
               {[
-                {label: "Default", value: "default"},
-                {label: "Price: Low → High", value: "price-low"},
-                {label: "Price: High → Low", value: "price-high"},
-                {label: "Name: A → Z", value: "name"},
-              ].map(({label, value}) => (
+                { label: "Default", value: "default" },
+                { label: "Price: Low → High", value: "price-low" },
+                { label: "Price: High → Low", value: "price-high" },
+                { label: "Name: A → Z", value: "name" },
+              ].map(({ label, value }) => (
                 <li
                   key={value}
                   onClick={() => {

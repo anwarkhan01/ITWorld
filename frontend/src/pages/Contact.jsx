@@ -169,7 +169,7 @@ const Contact = () => {
                 <Mail className="text-red-600" />
                 <div>
                   <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium">contact@ITWorld.in</p>
+                  <p className="font-medium">itworldvasai@gmail.com</p>
                 </div>
               </div>
 
@@ -177,7 +177,7 @@ const Contact = () => {
                 <Phone className="text-green-600" />
                 <div>
                   <p className="text-sm text-gray-500">Phone</p>
-                  <p className="font-medium">+91 3340550550</p>
+                  <p className="font-medium">+91 96658 65056</p>
                 </div>
               </div>
             </div>

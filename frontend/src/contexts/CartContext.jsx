@@ -1,13 +1,13 @@
-import {createContext, useContext, useEffect, useState, useRef} from "react";
-import {useAuth} from "./AuthContext.jsx";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
+import { useAuth } from "./AuthContext.jsx";
 
 const CartContext = createContext();
 
 const STORAGE_KEY = "cart";
 const SYNC_DELAY = 500;
 
-export const CartProvider = ({children}) => {
-  const {mongoUser, user, loading} = useAuth();
+export const CartProvider = ({ children }) => {
+  const { mongoUser, user, loading } = useAuth();
 
   const [cartItems, setCartItems] = useState([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -18,7 +18,7 @@ export const CartProvider = ({children}) => {
 
   // --- Compact Cart Format for Syncing ---
   const compactCart = (cart) =>
-    cart.map(({product_id, productId, id, quantity}) => ({
+    cart.map(({ product_id, productId, id, quantity }) => ({
       id: product_id || productId || id,
       quantity,
     }));
@@ -55,7 +55,7 @@ export const CartProvider = ({children}) => {
     try {
       if (!firebaseUser) return false;
       const token = await firebaseUser.getIdToken(true);
-      const body = JSON.stringify({cart: compactCart(cart)});
+      const body = JSON.stringify({ cart: compactCart(cart) });
       const res = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/api/cart/update-cart`,
         {
@@ -86,8 +86,8 @@ export const CartProvider = ({children}) => {
 
       const res = await fetch(url, {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ids}),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
       });
 
       if (!res.ok) throw new Error("Failed to fetch product details");
@@ -96,10 +96,10 @@ export const CartProvider = ({children}) => {
       const fetchedProducts = Array.isArray(data?.data) ? data.data : [];
 
       return cart
-        .map(({id, productId, quantity}) => {
+        .map(({ id, productId, quantity }) => {
           const pid = productId || id;
           const product = fetchedProducts.find((p) => p.product_id === pid);
-          return product ? {...product, quantity} : null;
+          return product ? { ...product, quantity } : null;
         })
         .filter(Boolean);
     } catch (err) {
@@ -114,7 +114,7 @@ export const CartProvider = ({children}) => {
 
     for (const item of server) {
       const pid = item.product_id || item.productId || item.id;
-      map.set(pid, {...item});
+      map.set(pid, { ...item });
     }
 
     for (const item of guest) {
@@ -126,7 +126,7 @@ export const CartProvider = ({children}) => {
           quantity: existing.quantity + item.quantity,
         });
       } else {
-        map.set(pid, {...item});
+        map.set(pid, { ...item });
       }
     }
 
@@ -222,17 +222,17 @@ export const CartProvider = ({children}) => {
       return existing
         ? prev.map((i) =>
             i.product_id === product.product_id
-              ? {...i, quantity: i.quantity + qty}
+              ? { ...i, quantity: i.quantity + qty }
               : i
           )
-        : [...prev, {...product, quantity: qty}];
+        : [...prev, { ...product, quantity: qty }];
     });
   };
 
   const increaseQty = (productId) =>
     setCartItems((prev) =>
       prev.map((i) =>
-        i.product_id === productId ? {...i, quantity: i.quantity + 1} : i
+        i.product_id === productId ? { ...i, quantity: i.quantity + 1 } : i
       )
     );
 
@@ -241,7 +241,7 @@ export const CartProvider = ({children}) => {
       prev
         .map((i) =>
           i.product_id === productId
-            ? {...i, quantity: Math.max(1, i.quantity - 1)}
+            ? { ...i, quantity: Math.max(1, i.quantity - 1) }
             : i
         )
         .filter(Boolean)

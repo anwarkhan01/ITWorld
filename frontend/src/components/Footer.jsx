@@ -1,15 +1,18 @@
 import { useNavigate } from "react-router-dom";
+import { Phone, Mail, Laptop, Monitor, Cpu, Headphones } from "lucide-react";
+
 const Footer = () => {
   const navigate = useNavigate();
+
   return (
     <footer className="bg-gray-900 text-gray-300">
       <div className="max-w-7xl mx-auto px-6 py-10 grid gap-8 md:grid-cols-4">
         {/* Brand / About */}
         <div>
-          <h2 className="text-xl font-semibold text-white mb-3">ITWorld</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">IT World</h2>
           <p className="text-sm leading-relaxed text-gray-400">
-            Your trusted store for the latest electronics, gadgets, and
-            accessories. Quality and innovation delivered to your door.
+            Trusted store for electronic products. Genuine hardware, honest
+            guidance, and reliable support.
           </p>
         </div>
 
@@ -17,10 +20,30 @@ const Footer = () => {
         <div>
           <h3 className="text-lg font-medium text-white mb-3">Shop</h3>
           <ul className="space-y-2 text-sm">
-            <li className="hover:text-white cursor-pointer">Laptops</li>
-            <li className="hover:text-white cursor-pointer">Mobiles</li>
-            <li className="hover:text-white cursor-pointer">Accessories</li>
-            <li className="hover:text-white cursor-pointer">Gaming</li>
+            <li
+              className="flex items-center gap-2 hover:text-white cursor-pointer"
+              onClick={() => navigate("/category/laptops")}
+            >
+              <Laptop size={16} /> Laptops
+            </li>
+            <li
+              className="flex items-center gap-2 hover:text-white cursor-pointer"
+              onClick={() => navigate("/category/desktops")}
+            >
+              <Cpu size={16} /> Desktops
+            </li>
+            <li
+              className="flex items-center gap-2 hover:text-white cursor-pointer"
+              onClick={() => navigate("/category/monitors")}
+            >
+              <Monitor size={16} /> Monitors
+            </li>
+            <li
+              className="flex items-center gap-2 hover:text-white cursor-pointer"
+              onClick={() => navigate("/category/accessories")}
+            >
+              <Headphones size={16} /> Accessories
+            </li>
           </ul>
         </div>
 
@@ -30,14 +53,16 @@ const Footer = () => {
           <ul className="space-y-2 text-sm">
             <li
               className="hover:text-white cursor-pointer"
-              onClick={() => {
-                console.log("called");
-                navigate("contact");
-              }}
+              onClick={() => navigate("/contact")}
             >
               Contact Us
             </li>
-            <li className="hover:text-white cursor-pointer">FAQs</li>
+            <li
+              className="hover:text-white cursor-pointer"
+              onClick={() => navigate("/about")}
+            >
+              About Us
+            </li>
             <li className="hover:text-white cursor-pointer">Warranty</li>
             <li className="hover:text-white cursor-pointer">
               Shipping & Returns
@@ -45,32 +70,29 @@ const Footer = () => {
           </ul>
         </div>
 
-        {/* Newsletter */}
+        {/* Contact */}
         <div>
-          <h3 className="text-lg font-medium text-white mb-3">Stay Updated</h3>
-          <p className="text-sm text-gray-400 mb-3">
-            Subscribe to get updates on new arrivals and exclusive offers.
+          <h3 className="text-lg font-medium text-white mb-3">Get in Touch</h3>
+          <p className="text-sm text-gray-400">
+            Online payments are currently unavailable. Orders are confirmed
+            manually.
           </p>
-          <form className="flex">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="w-full px-3 py-2 rounded-l-md bg-gray-800 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 rounded-r-md text-sm hover:bg-blue-700"
-            >
-              Subscribe
-            </button>
-          </form>
+
+          <div className="mt-3 space-y-2 text-sm">
+            <p className="flex items-center gap-2">
+              <Phone size={16} />
+              <a href="tel:+919665865056" className="text-blue-400">
+                +91 96658 65056
+              </a>
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t border-gray-800 mt-8">
+      <div className="border-t border-gray-800">
         <p className="text-center text-gray-500 text-sm py-4">
-          &copy; {new Date().getFullYear()} ITWorld. All rights reserved.
+          © {new Date().getFullYear()} IT World. All rights reserved.
         </p>
       </div>
     </footer>

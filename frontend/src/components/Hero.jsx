@@ -1,18 +1,40 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-
+import { useNavigate } from "react-router-dom";
 const heroImages = [
-  "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9",
-  "https://images.unsplash.com/photo-1517336714731-489689fd1ca8",
-  "https://images.unsplash.com/photo-1505740420928-5e560c06d30e",
-  "https://images.unsplash.com/photo-1502877338535-766e1452684a",
-  "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f",
+  "./HeroImages/Hero1.png",
+  "./HeroImages/Hero2.png",
+  "./HeroImages/Hero3.png",
+  "./HeroImages/Hero4.png",
+  "./HeroImages/Hero5.png",
 ];
 
+const heroSlides = [
+  {
+    img: "./HeroImages/Hero1.png",
+    link: "/product/acer-processor-graphics-win11home-al15g-53",
+  },
+  {
+    img: "./HeroImages/Hero2.png",
+    link: "/product/acer-aspire-lite-al15-52h-un-347si-00v-laptop",
+  },
+  {
+    img: "./HeroImages/Hero3.png",
+    link: "/product/acer-i3-1305u-premium-windows-al15-53",
+  },
+  {
+    img: "./HeroImages/Hero4.png",
+    link: "/product/acer-nitro-v-amd-ryzen-5-hexa-core-6600h-16-gb-512-gb-ssd",
+  },
+  {
+    img: "./HeroImages/Hero5.png",
+    link: "/products?category=Laptop",
+  },
+];
 const Hero = () => {
   const [current, setCurrent] = useState(0);
-  const length = heroImages.length;
-
+  const length = heroSlides.length;
+  const navigate = useNavigate();
   const nextSlide = () => {
     setCurrent(current === length - 1 ? 0 : current + 1);
   };
@@ -28,51 +50,84 @@ const Hero = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       nextSlide();
-    }, 5000);
+    }, 4000);
     return () => clearInterval(interval);
   }, [current]);
 
   return (
-    <div className="relative w-full min-h-[calc(100dvh-64px)] md:min-h-[calc(100vh-190px)] overflow-hidden">
-      {heroImages.map((img, index) => (
-        <div
-          key={index}
-          className={`absolute top-0 left-0 w-full h-full transition-opacity duration-700 ${
-            index === current ? "opacity-100 z-10" : "opacity-0 z-0"
-          }`}
-        >
+    <div className="relative w-full overflow-hidden aspect-video lg:aspect-auto lg:h-[calc(100dvh-190px)]">
+      <div className="absolute inset-0">
+        {heroSlides.map((slide, index) => (
           <img
-            src={img}
+            key={index}
+            src={slide.img}
             alt={`hero-${index}`}
-            className="w-full h-full object-cover"
+            draggable={false}
+            onClick={() => navigate(slide.link)}
+            className={`
+              absolute inset-0 w-full h-full object-fill
+              transition-opacity duration-700 cursor-pointer
+              ${index === current ? "opacity-100 z-10" : "opacity-0 z-0"}
+            `}
           />
-        </div>
-      ))}
+        ))}
+      </div>
 
-      {/* Arrows */}
+      {/* Arrows (tablet + up) */}
       <button
-        className="absolute top-1/2 left-4 hidden lg:block transform -translate-y-1/2 text-gray-200 bg-opacity-30 p-2 rounded-full z-20 hover:bg-opacity-50 transition"
         onClick={prevSlide}
+        className="
+      absolute left-3 top-1/2 -translate-y-1/2
+       md:flex
+      z-20
+      h-10 w-10 md:h-12 md:w-12
+      items-center justify-center
+      rounded-full
+      text-white
+      hover:bg-black/20
+      transition
+    "
       >
-        <ChevronLeft size={50} />
+        <ChevronLeft className="h-6 w-6 md:h-8 md:w-8" />
       </button>
+
       <button
-        className="absolute top-1/2 right-4 hidden lg:block transform -translate-y-1/2 text-gray-200 bg-opacity-30 p-2 rounded-full z-20 hover:bg-opacity-50 transition"
         onClick={nextSlide}
+        className="
+      absolute right-3 top-1/2 -translate-y-1/2
+       md:flex
+      z-20
+      h-10 w-10 md:h-12 md:w-12
+      items-center justify-center
+      rounded-full
+       text-white
+      hover:bg-black/20
+      transition
+    "
       >
-        <ChevronRight size={50} />
+        <ChevronRight className="h-6 w-6 md:h-8 md:w-8" />
       </button>
 
       {/* Dots */}
-      <div className="absolute bottom-6 left-1/2  hidden lg:flex  transform -translate-x-1/2 gap-3 z-20">
-        {heroImages.map((_, index) => (
-          <div
+      <div
+        className="
+      absolute bottom-3 md:bottom-5
+      left-1/2 -translate-x-1/2
+      z-20
+      flex gap-2
+    "
+      >
+        {heroSlides.map((_, index) => (
+          <button
             key={index}
             onClick={() => goToSlide(index)}
-            className={`w-3 h-3 rounded-full cursor-pointer ${
-              index === current ? "bg-white" : "bg-gray-400"
-            }`}
-          ></div>
+            className={`
+          h-2.5 w-2.5 md:h-3 md:w-3
+          rounded-full transition
+          ${index === current ? "bg-white scale-110" : "bg-white/50"}
+        `}
+            aria-label={`Go to slide ${index + 1}`}
+          />
         ))}
       </div>
     </div>

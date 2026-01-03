@@ -1,5 +1,5 @@
-import {useState, useRef} from "react";
-import {useNavigate} from "react-router-dom";
+import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Cpu,
   Laptop,
@@ -11,7 +11,7 @@ import {
   Backpack,
   ChevronDown,
 } from "lucide-react";
-import {motion, AnimatePresence} from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const categories = [
   {
@@ -120,21 +120,20 @@ const CategoryBelt = ({
 }) => {
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const [openMobileCategory, setOpenMobileCategory] = useState(null);
+
   const navigate = useNavigate();
   const categoryRefs = useRef({});
   const dropdownTimerRef = useRef(null);
 
-  const handleCategoryMouseEnter = (categoryName) => {
-    if (dropdownTimerRef.current) {
-      clearTimeout(dropdownTimerRef.current);
-    }
-    setHoveredCategory(categoryName);
+  const handleCategoryMouseEnter = (name) => {
+    if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
+    setHoveredCategory(name);
   };
 
   const handleCategoryMouseLeave = () => {
     dropdownTimerRef.current = setTimeout(() => {
       setHoveredCategory(null);
-    }, 200);
+    }, 150);
   };
 
   const handleCategoryClick = (category, value = null) => {
@@ -158,32 +157,35 @@ const CategoryBelt = ({
     ];
 
     if (value) {
-      if (brands.includes(value)) {
-        params.set("brand", value);
-      } else {
-        params.set("subcategory", value);
-      }
+      brands.includes(value)
+        ? params.set("brand", value)
+        : params.set("subcategory", value);
     }
 
-    setOpenMobileCategory(null);
     setHoveredCategory(null);
-
+    setOpenMobileCategory(null);
     navigate("/products?" + params.toString());
   };
 
   return (
     <>
-      <AnimatePresence initial={false}>
-        {showDesktop && !isScrolled && (
-          <motion.div
-            key="desktop-category-belt"
-            initial={{height: 0, opacity: 0}}
-            animate={{height: "auto", opacity: 1}}
-            exit={{height: 0, opacity: 0}}
-            transition={{duration: 0.25, ease: "easeInOut"}}
-            className="bg-gray-800 border-t border-gray-700 hidden md:block relative overflow-hidden"
-          >
-            <div className="max-w-5xl mx-auto px-6 py-2">
+      {/* ================= DESKTOP ================= */}
+      {showDesktop && (
+        <div
+          className={`
+      hidden md:block
+      bg-gray-800
+      transition-[max-height,opacity,transform] duration-200 ease-out
+      ${
+        isScrolled
+          ? "max-h-0 opacity-0 -translate-y-1 pointer-events-none"
+          : "max-h-20 opacity-100 translate-y-0"
+      }
+    `}
+        >
+          {/* inner wrapper prevents dropdown clipping */}
+          <div>
+            <div className="max-w-5xl mx-auto px-6 py-2 border-t border-gray-700">
               <div className="flex items-center justify-around overflow-x-auto scrollbar-hide">
                 {categories.map((category) => {
                   const Icon = category.icon;
@@ -195,11 +197,13 @@ const CategoryBelt = ({
                         handleCategoryMouseEnter(category.name)
                       }
                       onMouseLeave={handleCategoryMouseLeave}
-                      className="relative group"
+                      className="relative"
                     >
                       <button
                         onClick={() => handleCategoryClick(category.name)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-gray-300 hover:text-blue-400 font-medium text-sm whitespace-nowrap transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5
+                                   text-gray-300 hover:text-blue-400
+                                   font-medium text-sm whitespace-nowrap"
                       >
                         <Icon className="w-4 h-4" />
                         {category.name}
@@ -212,59 +216,56 @@ const CategoryBelt = ({
                         />
                       </button>
 
-                      <AnimatePresence>
-                        {hoveredCategory === category.name && (
-                          <motion.div
-                            initial={{opacity: 0, y: 10}}
-                            animate={{opacity: 1, y: 0}}
-                            exit={{opacity: 0, y: 10}}
-                            transition={{duration: 0.15}}
-                            className="fixed mt-1 w-56 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden z-60"
-                            style={{
-                              top:
-                                categoryRefs.current[
-                                  category.name
-                                ]?.getBoundingClientRect().bottom + 8 || 0,
-                              left:
-                                categoryRefs.current[
-                                  category.name
-                                ]?.getBoundingClientRect().left || 0,
-                            }}
-                            onMouseEnter={() =>
-                              handleCategoryMouseEnter(category.name)
-                            }
-                            onMouseLeave={handleCategoryMouseLeave}
+                      {hoveredCategory === category.name && (
+                        <div
+                          className="fixed w-56 bg-white rounded-lg shadow-xl
+                                     border border-gray-100 z-50"
+                          style={{
+                            top: "52.6px",
+                            left:
+                              categoryRefs.current[
+                                category.name
+                              ]?.getBoundingClientRect().left || 0,
+                          }}
+                          onMouseEnter={() =>
+                            handleCategoryMouseEnter(category.name)
+                          }
+                          onMouseLeave={handleCategoryMouseLeave}
+                        >
+                          <button
+                            onClick={() => handleCategoryClick(category.name)}
+                            className="w-full px-4 py-2 text-left font-semibold
+                                       text-gray-900 hover:bg-blue-50 hover:text-blue-600"
                           >
+                            All {category.name}
+                          </button>
+
+                          <div className="border-t border-gray-100" />
+
+                          {category.subcategories.map((sub) => (
                             <button
-                              onClick={() => handleCategoryClick(category.name)}
-                              className="w-full text-left px-4 py-2 font-semibold text-gray-900 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                              key={sub}
+                              onClick={() =>
+                                handleCategoryClick(category.name, sub)
+                              }
+                              className="w-full px-4 py-2 text-left text-sm
+                                         text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                             >
-                              All {category.name}
+                              {sub}
                             </button>
-                            <div className="border-t border-gray-100" />
-                            {category.subcategories.map((sub) => (
-                              <button
-                                key={sub}
-                                onClick={() =>
-                                  handleCategoryClick(category.name, sub)
-                                }
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                              >
-                                {sub}
-                              </button>
-                            ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
+      )}
 
+      {/* ================= MOBILE ================= */}
       {showMobile && (
         <div className="md:hidden">
           <div className="bg-gray-800 rounded-lg overflow-hidden">
@@ -297,15 +298,15 @@ const CategoryBelt = ({
                   <AnimatePresence>
                     {open && (
                       <motion.div
-                        initial={{height: 0, opacity: 0}}
-                        animate={{height: "auto", opacity: 1}}
-                        exit={{height: 0, opacity: 0}}
-                        transition={{duration: 0.2}}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
                         className="bg-gray-900 overflow-hidden"
                       >
                         <button
                           onClick={() => handleCategoryClick(cat.name)}
-                          className="w-full text-left px-6 py-2 text-sm text-blue-400 hover:bg-gray-700"
+                          className="w-full px-6 py-2 text-left text-sm text-blue-400 hover:bg-gray-700"
                         >
                           All {cat.name}
                         </button>
@@ -314,7 +315,8 @@ const CategoryBelt = ({
                           <button
                             key={sub}
                             onClick={() => handleCategoryClick(cat.name, sub)}
-                            className="w-full text-left px-6 py-2 text-sm text-gray-400 hover:text-blue-400 hover:bg-gray-700"
+                            className="w-full px-6 py-2 text-left text-sm
+                                       text-gray-400 hover:text-blue-400 hover:bg-gray-700"
                           >
                             {sub}
                           </button>
@@ -332,4 +334,4 @@ const CategoryBelt = ({
   );
 };
 
-export {CategoryBelt, categories};
+export { CategoryBelt, categories };
