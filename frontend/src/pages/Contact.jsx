@@ -82,7 +82,8 @@ const Contact = () => {
           name: formData.name,
           email: formData.email,
           message: formData.message,
-        }`${import.meta.env.VITE_EMAIL_PUBLIC_KEY}`
+        },
+        `${import.meta.env.VITE_EMAIL_PUBLIC_KEY}`
       )
       .then(() => {
         alert("Message sent successfully!");
