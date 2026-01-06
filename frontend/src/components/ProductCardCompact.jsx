@@ -22,7 +22,7 @@ export default function ProductCard({ product, onAdd }) {
       className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-gray-200 transition-all duration-300 hover:shadow-xl"
       onClick={() => navigate(`/product/${product.product_id}`)}
     >
-      <Link to={`/product/${product.product_id}`}>
+      <Link>
         <div className="relative aspect-square bg-white overflow-hidden flex items-center justify-center p-4">
           {hasDiscount && (
             <div className="absolute top-3 left-3 z-10 bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">

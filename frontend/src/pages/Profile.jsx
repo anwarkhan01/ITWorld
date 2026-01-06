@@ -533,7 +533,7 @@ const Profile = () => {
           </div>
         </div>
         {/* Order */}
-        <div className="bg-white rounded-xl shadow border border-gray-200 p-4 sm:p-6 mt-6">
+        {/* <div className="bg-white rounded-xl shadow border border-gray-200 p-4 sm:p-6 mt-6">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             Recent Orders
           </h2>
@@ -621,7 +621,7 @@ const Profile = () => {
               </div>
             </>
           )}
-        </div>
+        </div> */}
       </div>
       {showToast && (
         <Toast

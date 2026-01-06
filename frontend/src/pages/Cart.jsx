@@ -31,8 +31,9 @@ export default function Cart() {
 
   const handleRemoveItem = (productId, name) => {
     removeFromCart(productId);
+    const shortName = name.length > 30 ? name.slice(0, 30).trim() + "…" : name;
     setToastData({
-      message: `${name} removed from cart`,
+      message: `${shortName} removed from cart`,
       type: "success",
     });
     setShowToast(true);
@@ -85,7 +86,7 @@ export default function Cart() {
                     <div>
                       <Link
                         to={`/product/${it.product_id}`}
-                        className="font-semibold text-gray-800 hover:text-blue-600 transition"
+                        className="font-semibold text-gray-800 hover:text-blue-600 transition line-clamp-2"
                       >
                         {it.product_name}
                       </Link>
